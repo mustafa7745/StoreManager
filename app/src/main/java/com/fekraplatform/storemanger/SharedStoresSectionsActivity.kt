@@ -159,9 +159,6 @@ class SharedStoresSectionsActivity : ComponentActivity() {
                     }
                 }
 //               LazyColumn {
-//                   item {
-//                       Spacer(Modifier.height(50.dp))
-//                   }
 //
 //                   item {
 //                       Card(
