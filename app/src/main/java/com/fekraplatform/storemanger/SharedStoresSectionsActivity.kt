@@ -89,8 +89,11 @@ class SharedStoresSectionsActivity : ComponentActivity() {
                                 }
                             }
 
+                            val sec = if (SingletonStoreConfig.isSharedStore()){
+                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeCategoriesSections.filter { it.storeCategoryId == storeCategory1.id } else SingletonHome.home.value!!.storeCategoriesSections.filter { it.storeCategoryId == storeCategory1.id }.filterNot { it.id in SingletonStoreConfig.sections.value }                            }
+                            else SingletonHome.home.value!!.storeCategoriesSections.filter { it.storeCategoryId == storeCategory1.id }
 
-                            itemsIndexed(if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeCategoriesSections.filter { it.storeCategoryId == storeCategory1.id } else SingletonHome.home.value!!.storeCategoriesSections.filter { it.storeCategoryId == storeCategory1.id }.filterNot { it.id in SingletonStoreConfig.sections.value } ){index, section ->
+                            itemsIndexed(sec){index, section ->
 
                                 Card(
                                     Modifier

@@ -50,9 +50,15 @@ import okhttp3.MultipartBody
 import java.time.Duration
 import java.time.LocalDateTime
 
+
 object SingletonStoreConfig{
     lateinit var storeId: String
     lateinit var typeId:String
+    lateinit var storeIdReference:String
+
+    fun isSharedStore():Boolean{
+        return typeId == "1"
+    }
     val categories   =  mutableStateOf<List<Int>>(emptyList())
     val sections   =  mutableStateOf<List<Int>>(emptyList())
     val nestedSection   =  mutableStateOf<List<Int>>(emptyList())
@@ -60,6 +66,7 @@ object SingletonStoreConfig{
 
     @Composable
     fun EditModeCompose() {
+        if (typeId=="1")
         Card(
             Modifier
                 .fillMaxWidth()
@@ -117,30 +124,30 @@ object SingletonHome {
     }
     val homeStorage = HomeStorage();
     val home = mutableStateOf<Home?>(null)
-    fun initHome(){
-        if (homeStorage.isSetHome()) {
+    fun initHome(storeId: String){
+        if (homeStorage.isSetHome(storeId)) {
             Log.e("frf23", home.value.toString())
             val diff =
-                Duration.between(homeStorage.getDate(), getCurrentDate()).toMinutes()
+                Duration.between(homeStorage.getDate(storeId), getCurrentDate()).toMinutes()
             if (diff <= 5) {
                 stateController.successState()
-                Log.e("frf", homeStorage.getHome().toString())
-                home.value = homeStorage.getHome()
+                Log.e("frf", homeStorage.getHome(storeId).toString())
+                home.value = homeStorage.getHome(storeId)
 
                 return
 //                return true
             }
         }
         Log.e("frf2344", home.value.toString())
-        read()
+        read(storeId)
 //        return false
     }
-    fun read() {
+    fun read(storeId: String) {
         stateController.startRead()
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId","1")
+            .addFormDataPart("storeId",storeId)
             .build()
 
         requestServer.request2(body, "getStoreCategories", { code, fail ->
@@ -152,7 +159,7 @@ object SingletonHome {
                     data
                 )
             home.value = result
-            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result))
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),storeId)
             Log.e("dsd", home.value.toString())
             Log.e("dsd2",result.toString())
             stateController.successState()
@@ -218,6 +225,7 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
                 SingletonStoreConfig.typeId = store.typeId.toString()
                 SingletonStoreConfig.storeId = store.id.toString()
                 if (store.storeConfig != null){
+                    SingletonStoreConfig.storeIdReference = store.storeConfig!!.storeIdReference.toString()
                     SingletonStoreConfig.categories.value = store.storeConfig!!.categories
                     SingletonStoreConfig.sections.value = store.storeConfig!!.sections
                     SingletonStoreConfig.nestedSection.value = store.storeConfig!!.nestedSections
@@ -237,10 +245,11 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
 
 //        SingletonHome.stateController.successState()
 
-        if (SingletonStoreConfig.typeId == "1")
-            SingletonHome.initHome()
-
-//        read()
+        if (SingletonStoreConfig.isSharedStore()){
+            SingletonHome.initHome(SingletonStoreConfig.storeIdReference)
+        }else{
+            SingletonHome.initHome(SingletonStoreConfig.storeId)
+        }
 
 //        if (SingletonHome.isSetHome()){
 //            stateController.successState()
@@ -261,7 +270,7 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
 
                     MainCompose1 (
                         0.dp,SingletonHome.stateController, this,
-                        { SingletonHome.read() },
+                        { SingletonHome.read(if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId) },
                     ) {
                         LazyColumn {
 //                            if ()
@@ -278,7 +287,12 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
 //                            }
 //                            item {
 //                                LazyRow(Modifier.fillMaxWidth().height(100.dp).padding(8.dp)) {
-                                    itemsIndexed(if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeCategories else SingletonHome.home.value!!.storeCategories.filterNot { it.id in SingletonStoreConfig.categories.value } ){index, category ->
+
+                            val cats = if (SingletonStoreConfig.isSharedStore()){
+                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeCategories else SingletonHome.home.value!!.storeCategories.filterNot { it.id in SingletonStoreConfig.categories.value }
+                            }
+                            else SingletonHome.home.value!!.storeCategories
+                                    itemsIndexed(cats ){index, category ->
 
                                         Card(
                                             Modifier
@@ -435,24 +449,24 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
     startActivity(intent)
 }
 fun read() {
-    stateController.startRead()
-
+    SingletonHome.stateController.startRead()
     val body = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
-//        .addFormDataPart("storeId", SingletonHome.store.value!!.id.toString())
+        .addFormDataPart("storeId", SingletonStoreConfig.storeId)
         .build()
 
     requestServer.request2(body, "getStoreCategories", { code, fail ->
-        stateController.errorStateRead(fail)
+        SingletonHome.stateController.errorStateRead(fail)
     }
     ) { data ->
         val result:Home =
             MyJson.IgnoreUnknownKeys.decodeFromString(
                 data
             )
-        home.value = result
+
+       SingletonHome.home.value = result
 //        SingletonHome.homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result))
-        stateController.successState()
+        SingletonHome.stateController.successState()
     }
 }
 fun readCategories() {

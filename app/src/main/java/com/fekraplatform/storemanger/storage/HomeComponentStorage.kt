@@ -12,25 +12,25 @@ class HomeStorage {
     private val homeComponentKey = "home"
     private val dateKey = "dateKey"
 
-    fun isSetHome():Boolean{
+    fun isSetHome(storeId:String):Boolean{
         return try {
 //            Log.e("gtgt",getHome().toString())
-            getHome()
+            getHome(storeId)
             true
         }catch (e:Exception){
-            setHome("")
+            setHome("",storeId)
             false
         }
     }
-    fun setHome(data:String){
-        getStorage.setData(dateKey, getCurrentDate().toString())
-        getStorage.setData(homeComponentKey,data)
+    fun setHome(data:String,storeId:String){
+        getStorage.setData(dateKey+storeId, getCurrentDate().toString())
+        getStorage.setData(homeComponentKey+storeId,data)
     }
 
-    fun getDate(): LocalDateTime? {
-       return (LocalDateTime.parse(getStorage.getData(dateKey)))
+    fun getDate(storeId:String): LocalDateTime? {
+       return (LocalDateTime.parse(getStorage.getData(dateKey+storeId)))
     }
-    fun getHome():Home{
-       return MyJson.IgnoreUnknownKeys.decodeFromString(getStorage.getData(homeComponentKey))
+    fun getHome(storeId:String):Home{
+       return MyJson.IgnoreUnknownKeys.decodeFromString(getStorage.getData(homeComponentKey+storeId))
     }
 }

@@ -78,4 +78,5 @@ data class StoreConfig(
     val sections: List<Int>,
     val nestedSections: List<Int>,
     val products: List<Int>,
+    val storeIdReference :Int
 )

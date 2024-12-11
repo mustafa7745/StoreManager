@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fekraplatform.storemanger.SelectedStore
+import com.fekraplatform.storemanger.SingletonStoreConfig
 import com.fekraplatform.storemanger.models.CsPsSCR
 import com.fekraplatform.storemanger.models.MyProduct
 import com.fekraplatform.storemanger.models.StoreCategory
@@ -293,86 +294,87 @@ class ProductsActivity : ComponentActivity() {
                                         }
 
 
-                                        Row (Modifier.fillMaxWidth()
-                                            , verticalAlignment = Alignment.CenterVertically
-                                        ){
+                                        if (!SingletonStoreConfig.isSharedStore()){
+                                            Row (Modifier.fillMaxWidth()
+                                                , verticalAlignment = Alignment.CenterVertically
+                                            ){
 
-                                            IconButton(onClick = {
-                                                getContent.launch("image/*")
-                                                selectedStoreProduct = storeProduct
-                                                isShowAddImage.value = true
-                                            }) {
-                                                Icon(
-                                                    modifier =
-                                                    Modifier
-                                                        .border(
-                                                            1.dp,
-                                                            MaterialTheme.colorScheme.primary,
-                                                            RoundedCornerShape(
-                                                                16.dp
+                                                IconButton(onClick = {
+                                                    getContent.launch("image/*")
+                                                    selectedStoreProduct = storeProduct
+                                                    isShowAddImage.value = true
+                                                }) {
+                                                    Icon(
+                                                        modifier =
+                                                        Modifier
+                                                            .border(
+                                                                1.dp,
+                                                                MaterialTheme.colorScheme.primary,
+                                                                RoundedCornerShape(
+                                                                    16.dp
+                                                                )
                                                             )
-                                                        )
-                                                        .clip(
-                                                            RoundedCornerShape(
-                                                                16.dp
-                                                            )
-                                                        ),
-                                                    imageVector = Icons.Outlined.Add,
-                                                    contentDescription = ""
-                                                )
+                                                            .clip(
+                                                                RoundedCornerShape(
+                                                                    16.dp
+                                                                )
+                                                            ),
+                                                        imageVector = Icons.Outlined.Add,
+                                                        contentDescription = ""
+                                                    )
+                                                }
+                                                Text("الصور")
                                             }
-                                            Text("الصور")
-                                        }
-                                        LazyRow(
-                                            Modifier.height(120.dp)
-                                        ) {
-                                            itemsIndexed(storeProduct.images){ index: Int, item: ProductImage ->
-                                                Log.e("urlfff",U1R.BASE_IMAGE_URL+item.image)
-                                                Box (Modifier.size(100.dp)){
-                                                    CustomImageView(
-                                                        modifier = Modifier
-                                                            .size(100.dp)
-                                                            .padding(8.dp)
-                                                            .clickable {
-                                                                selectedImage = item
-                                                                isShowUpdateImage.value = true
+                                            LazyRow(
+                                                Modifier.height(120.dp)
+                                            ) {
+                                                itemsIndexed(storeProduct.images){ index: Int, item: ProductImage ->
+                                                    Log.e("urlfff",U1R.BASE_IMAGE_URL+item.image)
+                                                    Box (Modifier.size(100.dp)){
+                                                        CustomImageView(
+                                                            modifier = Modifier
+                                                                .size(100.dp)
+                                                                .padding(8.dp)
+                                                                .clickable {
+                                                                    selectedImage = item
+                                                                    isShowUpdateImage.value = true
 
 //                                        if (inputStream != null)
 //                                        uploadImage(inputStream,item.id)
-                                                            },
-                                                        context = this@ProductsActivity,
-                                                        imageUrl = U1R.BASE_IMAGE_URL+U1R.SUB_FOLDER_PRODUCT+item.image,
-                                                        okHttpClient = requestServer.createOkHttpClientWithCustomCert()
-                                                    )
-                                                    IconButton(onClick = {
-                                                        selectedImage = item
-                                                        isShowDeleteImage.value = true
-                                                    }
-                                                        ,
-                                                        Modifier
-                                                            .align(Alignment.BottomEnd)
-                                                            .padding(5.dp)
-                                                    ) {
-                                                        Icon(
-                                                            modifier =
-                                                            Modifier
-                                                                .border(
-                                                                    1.dp,
-                                                                    MaterialTheme.colorScheme.primary,
-                                                                    RoundedCornerShape(
-                                                                        16.dp
-                                                                    )
-                                                                )
-                                                                .clip(
-                                                                    RoundedCornerShape(
-                                                                        16.dp
-                                                                    )
-                                                                ),
-                                                            imageVector = Icons.Outlined.Delete,
-                                                            contentDescription = ""
+                                                                },
+                                                            context = this@ProductsActivity,
+                                                            imageUrl = U1R.BASE_IMAGE_URL+U1R.SUB_FOLDER_PRODUCT+item.image,
+                                                            okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                                                         )
+                                                        IconButton(onClick = {
+                                                            selectedImage = item
+                                                            isShowDeleteImage.value = true
+                                                        }
+                                                            ,
+                                                            Modifier
+                                                                .align(Alignment.BottomEnd)
+                                                                .padding(5.dp)
+                                                        ) {
+                                                            Icon(
+                                                                modifier =
+                                                                Modifier
+                                                                    .border(
+                                                                        1.dp,
+                                                                        MaterialTheme.colorScheme.primary,
+                                                                        RoundedCornerShape(
+                                                                            16.dp
+                                                                        )
+                                                                    )
+                                                                    .clip(
+                                                                        RoundedCornerShape(
+                                                                            16.dp
+                                                                        )
+                                                                    ),
+                                                                imageVector = Icons.Outlined.Delete,
+                                                                contentDescription = ""
+                                                            )
+                                                        }
                                                     }
-                                                }
 
 //                                                Button(onClick = {
 //                                                    selectedImage = item
@@ -388,6 +390,7 @@ class ProductsActivity : ComponentActivity() {
 //                                    }) {
 //                                        Text("save")
 //                                    }
+                                                }
                                             }
                                         }
                                     }

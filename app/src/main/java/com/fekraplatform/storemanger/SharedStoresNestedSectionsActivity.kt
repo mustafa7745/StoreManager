@@ -87,7 +87,12 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
                                     Text("add")
                                 }
                             }
-                            itemsIndexed(if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id } else SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id }.filterNot { it.id in SingletonStoreConfig.nestedSection.value } ){index, nestedSection ->
+
+                            val nestedCats = if (SingletonStoreConfig.isSharedStore()){
+                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id } else SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id }.filterNot { it.id in SingletonStoreConfig.nestedSection.value }                            }
+                            else SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id }
+
+                            itemsIndexed(nestedCats){index, nestedSection ->
 
                                 Card(
                                     Modifier
