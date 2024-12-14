@@ -1,8 +1,7 @@
 package com.fekraplatform.storemanger.storage
 
 import GetStorage
-import android.util.Log
-import com.fekraplatform.storemanger.getCurrentDate
+import com.fekraplatform.storemanger.activities.getCurrentDate
 import com.fekraplatform.storemanger.models.Home
 import com.fekraplatform.storemanger.shared.MyJson
 import java.time.LocalDateTime

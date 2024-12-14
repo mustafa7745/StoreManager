@@ -1,4 +1,4 @@
-package com.fekraplatform.storemanger
+package com.fekraplatform.storemanger.activities
 
 import android.content.Intent
 import android.os.Bundle
@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.models.Store
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
@@ -32,9 +33,7 @@ import kotlinx.serialization.encodeToString
 import okhttp3.MultipartBody
 
 
-object SelectedStore {
-    val store = mutableStateOf<Store?>(null)
-}
+
 class StoresActivity : ComponentActivity() {
     private val stores = mutableStateOf<List<Store>>(listOf())
     val stateController = StateController()
@@ -142,7 +141,7 @@ class StoresActivity : ComponentActivity() {
 private fun goToStores(store: Store) {
     val intent = Intent(
         this,
-        SharedStoresCategoriesActivity::class.java
+        StoreCategoriesActivity::class.java
     )
     intent.putExtra("store", MyJson.MyJson.encodeToString(store))
     startActivity(intent)

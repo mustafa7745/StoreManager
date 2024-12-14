@@ -1,4 +1,4 @@
-package com.fekraplatform.storemanger
+package com.fekraplatform.storemanger.activities
 
 import android.content.Intent
 import android.os.Bundle
@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.fekraplatform.storemanger.models.Category
 import com.fekraplatform.storemanger.models.Home
 import com.fekraplatform.storemanger.models.Store
-import com.fekraplatform.storemanger.models.StoreCategory1
+import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.StoreConfig
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
@@ -66,7 +66,7 @@ object SingletonStoreConfig{
 
     @Composable
     fun EditModeCompose() {
-        if (typeId=="1")
+        if (typeId =="1")
         Card(
             Modifier
                 .fillMaxWidth()
@@ -117,10 +117,10 @@ object SingletonHome {
     lateinit var requestServer : RequestServer
 //
     fun setStateController1(states: StateController){
-        stateController=states
+        stateController =states
     }
     fun setReqestController(request: RequestServer){
-        requestServer=request
+        requestServer =request
     }
     val homeStorage = HomeStorage();
     val home = mutableStateOf<Home?>(null)
@@ -175,7 +175,7 @@ object SingletonHome {
             .addFormDataPart("products", products.value.toString())
             .addFormDataPart("nestedSections", nestedSection.value.toString())
             .addFormDataPart("sections", sections.value.toString())
-            .addFormDataPart("categories",categories.value.toString())
+            .addFormDataPart("categories", categories.value.toString())
             .build()
 
         requestServer.request2(body, "updateStoreConfig", { code, fail ->
@@ -200,15 +200,12 @@ fun getCurrentDate(): LocalDateTime {
     return LocalDateTime.now()
 }
 
-class SharedStoresCategoriesActivity : ComponentActivity() {
-    private val storeCategories = mutableStateOf<List<StoreCategory1>>(listOf())
+class StoreCategoriesActivity : ComponentActivity() {
+    private val storeCategories = mutableStateOf<List<StoreCategory>>(listOf())
     private val categories = mutableStateOf<List<Category>>(listOf())
     val stateController = StateController()
     val requestServer = RequestServer(this)
     val isShowAddCatgory = mutableStateOf(false)
-    val home = mutableStateOf<Home?>(null)
-//    lateinit var store:Store
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -269,7 +266,7 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
                 SingletonHome.products.value = SingletonStoreConfig.products.value
 
                     MainCompose1 (
-                        0.dp,SingletonHome.stateController, this,
+                        0.dp, SingletonHome.stateController, this,
                         { SingletonHome.read(if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId) },
                     ) {
                         LazyColumn {
@@ -304,19 +301,19 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
                                                 Modifier
                                                     .fillMaxSize()
                                                     .clickable {
-                                                        if (! SingletonHome. categories.value.any { it == category.id }) goToSections(category)
+                                                        if (! SingletonHome.categories.value.any { it == category.id }) goToSections(category)
                                                     }
                                             ){
                                                 Text(category.categoryName,Modifier.align(Alignment.Center))
                                                 if (SingletonHome.isEditMode.value){
                                                     if (SingletonStoreConfig.categories.value.any { number -> number == category.id }){
-                                                        if (! SingletonHome. categories.value.any { it == category.id }) {
+                                                        if (! SingletonHome.categories.value.any { it == category.id }) {
                                                             Text(
                                                                 "تمت الاضافة بانتظار التأكيد",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
-                                                                        SingletonHome. categories.value +=category.id
+                                                                        SingletonHome.categories.value +=category.id
                                                                     })
                                                         }
                                                         else{
@@ -333,19 +330,19 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
                                                         }
                                                     }
                                                     else{
-                                                        if ( SingletonHome. categories.value.any { it == category.id }){
+                                                        if ( SingletonHome.categories.value.any { it == category.id }){
                                                             Text("تمت الحذف بانتظار التأكيد",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
-                                                                        SingletonHome.  categories.value -= category.id
+                                                                        SingletonHome.categories.value -= category.id
                                                                     })
                                                         }else{
                                                             Text("حذف",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
-                                                                        SingletonHome. categories.value+=category.id
+                                                                        SingletonHome.categories.value+=category.id
                                                                     })
                                                         }
 
@@ -440,12 +437,12 @@ class SharedStoresCategoriesActivity : ComponentActivity() {
 
 
 
-    private fun goToSections(storeCategory1: StoreCategory1) {
+    private fun goToSections(storeCategory: StoreCategory) {
     val intent = Intent(
         this,
-        SharedStoresSectionsActivity::class.java
+        StoreSectionsActivity::class.java
     )
-    intent.putExtra("storeCategory1", MyJson.MyJson.encodeToString(storeCategory1))
+    intent.putExtra("storeCategory", MyJson.MyJson.encodeToString(storeCategory))
     startActivity(intent)
 }
 fun read() {
@@ -486,7 +483,7 @@ fun readCategories() {
                     data
                 )
 
-          SingletonHome.  stateController.successStateAUD()
+          SingletonHome.stateController.successStateAUD()
         }
     }
 private fun add(storeId: String,categoryId:String) {
@@ -503,7 +500,7 @@ private fun add(storeId: String,categoryId:String) {
             stateController.errorStateAUD(fail)
         }
         ){it->
-            val result: StoreCategory1 =  MyJson.IgnoreUnknownKeys.decodeFromString(
+            val result: StoreCategory =  MyJson.IgnoreUnknownKeys.decodeFromString(
                 it
             )
 

@@ -1,4 +1,4 @@
-package com.fekraplatform.storemanger
+package com.fekraplatform.storemanger.activities
 
 import android.content.Intent
 import android.os.Bundle
@@ -30,11 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.fekraplatform.storemanger.activities.ProductsActivity
-import com.fekraplatform.storemanger.models.Category3
-import com.fekraplatform.storemanger.models.CsPsSCR
-import com.fekraplatform.storemanger.models.Scp
-import com.fekraplatform.storemanger.models.StoreCategorySection
+import com.fekraplatform.storemanger.models.Section
+import com.fekraplatform.storemanger.models.StoreCategory
+import com.fekraplatform.storemanger.models.StoreSection
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -44,21 +42,21 @@ import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import kotlinx.serialization.encodeToString
 import okhttp3.MultipartBody
 
-class SharedStoresNestedSectionsActivity : ComponentActivity() {
-    private val CsPsSCRs = mutableStateOf<List<CsPsSCR>>(listOf())
-    private val categories3 = mutableStateOf<List<Category3>>(listOf())
+class StoreSectionsActivity : ComponentActivity() {
+    private val storeSections = mutableStateOf<List<StoreSection>>(listOf())
+    private val sections = mutableStateOf<List<Section>>(listOf())
     val stateController = StateController()
     val requestServer = RequestServer(this)
     val isShowAddSection = mutableStateOf(false)
 
-    lateinit var sectionStoreCategory: StoreCategorySection
+    lateinit var storeCategory: StoreCategory
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val intent = intent
-        val str = intent.getStringExtra("sectionStoreCategory")
+        val str = intent.getStringExtra("storeCategory")
         if (str != null) {
             try {
-                sectionStoreCategory = MyJson.IgnoreUnknownKeys.decodeFromString(str)
+                storeCategory = MyJson.IgnoreUnknownKeys.decodeFromString(str)
             }catch (e:Exception){
                 finish()
             }
@@ -66,8 +64,8 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
         } else {
             finish()
         }
+
         stateController.successState()
-//        read()
         enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
@@ -77,9 +75,11 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
                         { read() },
                     ) {
                         LazyColumn {
+
                             item {
                                 SingletonStoreConfig.EditModeCompose()
                             }
+
                             item {
                                 Button(onClick = {
                                     isShowAddSection.value = true
@@ -88,11 +88,25 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
                                 }
                             }
 
-                            val nestedCats = if (SingletonStoreConfig.isSharedStore()){
-                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id } else SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id }.filterNot { it.id in SingletonStoreConfig.nestedSection.value }                            }
-                            else SingletonHome.home.value!!.csps.filter { it.storeCategorySectionId == sectionStoreCategory.id }
+//                            val sec = if (SingletonStoreConfig.isSharedStore()){
+//                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeSections.filter { it.storeCategoryId == storeCategory.id } else SingletonHome.home.value!!.storeSections.filter { it.storeCategoryId == storeCategory.id }.filterNot { it.id in SingletonStoreConfig.sections.value }                            }
+//                            else SingletonHome.home.value!!.storeSections.filter { it.storeCategoryId == storeCategory.id }
 
-                            itemsIndexed(nestedCats){index, nestedSection ->
+                            val sections = SingletonHome.home.value!!.storeSections
+                                .filter { it.storeCategoryId == storeCategory.id }
+                                .let { sections ->
+                                    if (SingletonStoreConfig.isSharedStore()) {
+                                        if (SingletonHome.isEditMode.value) {
+                                            sections
+                                        } else {
+                                            sections.filterNot { it.id in SingletonStoreConfig.sections.value }
+                                        }
+                                    } else {
+                                        sections
+                                    }
+                                }
+
+                            itemsIndexed(sections){index, section ->
 
                                 Card(
                                     Modifier
@@ -104,19 +118,19 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
                                         Modifier
                                             .fillMaxSize()
                                             .clickable {
-                                                if (! SingletonHome. nestedSection.value.any { it == nestedSection.id })    goToProduct(nestedSection)
+                                                if (! SingletonHome.sections.value.any { it == section.id })    goToSections(section)
                                             }
                                     ){
-                                        Text(nestedSection.name,Modifier.align(Alignment.Center))
+                                        Text(section.sectionName,Modifier.align(Alignment.Center))
                                         if (SingletonHome.isEditMode.value){
-                                            if (SingletonStoreConfig.nestedSection.value.any { number -> number == nestedSection.id }){
-                                                if (! SingletonHome. nestedSection.value.any { it == nestedSection.id }) {
+                                            if (SingletonStoreConfig.sections.value.any { number -> number == section.id }){
+                                                if (! SingletonHome.sections.value.any { it == section.id }) {
                                                     Text(
                                                         "تمت الاضافة بانتظار التأكيد",
                                                         Modifier
                                                             .align(Alignment.BottomEnd)
                                                             .clickable {
-                                                                SingletonHome. nestedSection.value +=nestedSection.id
+                                                                SingletonHome.sections.value +=section.id
                                                             })
                                                 }
                                                 else{
@@ -126,26 +140,26 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
                                                             .align(Alignment.BottomEnd)
                                                             .clickable {
 //                                                                        Log.e("rtrt", SingletonHome. categories.toString())
-                                                                SingletonHome.nestedSection.value -= nestedSection.id
+                                                                SingletonHome.sections.value -= section.id
 //                                                                        Log.e("rtrt", SingletonHome. categories.toString())
 
                                                             })
                                                 }
                                             }
                                             else{
-                                                if ( SingletonHome. nestedSection.value.any { it == nestedSection.id }){
+                                                if ( SingletonHome.sections.value.any { it == section.id }){
                                                     Text("تمت الحذف بانتظار التأكيد",
                                                         Modifier
                                                             .align(Alignment.BottomEnd)
                                                             .clickable {
-                                                                SingletonHome.nestedSection.value -= nestedSection.id
+                                                                SingletonHome.sections.value -= section.id
                                                             })
                                                 }else{
                                                     Text("حذف",
                                                         Modifier
                                                             .align(Alignment.BottomEnd)
                                                             .clickable {
-                                                                SingletonHome. nestedSection.value+=nestedSection.id
+                                                                SingletonHome.sections.value+=section.id
                                                             })
                                                 }
 
@@ -161,9 +175,6 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
                     }
                 }
 //               LazyColumn {
-//                   item {
-//                       Spacer(Modifier.height(50.dp))
-//                   }
 //
 //                   item {
 //                       Card(
@@ -219,29 +230,28 @@ class SharedStoresNestedSectionsActivity : ComponentActivity() {
 //        )
 //        startActivity(intent)
 //    }
-
-    private fun goToProduct(scr: Scp) {
-        val intent = Intent(
-            this,
-            ProductsActivity::class.java
-        )
-        intent.putExtra("scr", MyJson.MyJson.encodeToString(scr))
-        startActivity(intent)
-    }
+private fun goToSections(storeSection: StoreSection) {
+    val intent = Intent(
+        this,
+        StoreNestedSectionsActivity::class.java
+    )
+    intent.putExtra("storeSection", MyJson.MyJson.encodeToString(storeSection))
+    startActivity(intent)
+}
 fun read() {
     stateController.startRead()
 
     val body = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
         .addFormDataPart("storeId", "1")
-        .addFormDataPart("sectionsStoreCategoryId", sectionStoreCategory.id.toString())
+        .addFormDataPart("storeCategory1Id", storeCategory.id.toString())
         .build()
 
-    requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getCsPsSCR", { code, fail ->
+    requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getSecionsStoreCategories", { code, fail ->
         stateController.errorStateRead(fail)
     }
     ) { data ->
-        CsPsSCRs.value =
+        storeSections.value =
             MyJson.IgnoreUnknownKeys.decodeFromString(
                 data
             )
@@ -249,35 +259,55 @@ fun read() {
         stateController.successState()
     }
 }
-private fun add(category3Id: String) {
-
+fun readSections() {
         stateController.startAud()
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("category3Id",category3Id.toString())
-            .addFormDataPart("sectionsStoreCategoryId",sectionStoreCategory.id.toString())
+            .addFormDataPart("category1Id", storeCategory.categoryId.toString())
+            .addFormDataPart("storeId", "1")
             .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addCsPsSCR",{code,fail->
+        requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getSections", { code, fail ->
             stateController.errorStateAUD(fail)
         }
-        ){it->
-            val result: CsPsSCR =  MyJson.IgnoreUnknownKeys.decodeFromString(
-                it
-            )
+        ) { data ->
+            sections.value =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
 
-            CsPsSCRs.value += result
-            isShowAddSection.value = false
-            stateController.successStateAUD("تمت الاضافه  بنجاح")
+            stateController.successStateAUD()
         }
+    }
+private fun add(sectionId: String) {
+
+//        stateController.startAud()
+//
+//        val body = MultipartBody.Builder()
+//            .setType(MultipartBody.FORM)
+//            .addFormDataPart("sectionId",sectionId)
+//            .addFormDataPart("storeCategory1Id",storeCategory.id.toString())
+//            .build()
+//
+//        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addSectionStoreCategory",{code,fail->
+//            stateController.errorStateAUD(fail)
+//        }
+//        ){it->
+//            val result: SectionStoreCategory =  MyJson.IgnoreUnknownKeys.decodeFromString(
+//                it
+//            )
+//
+//            storeSections.value += result
+//            isShowAddSection.value = false
+//            stateController.successStateAUD("تمت الاضافه  بنجاح")
+//        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun modalAddMyCategory() {
-        var value by remember { mutableStateOf("") }
-        var category3 by remember { mutableStateOf<Category3?>(null) }
+        var section by remember { mutableStateOf<Section?>(null) }
         ModalBottomSheet(
             onDismissRequest = { isShowAddSection.value = false }) {
             Box(
@@ -289,29 +319,30 @@ private fun add(category3Id: String) {
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center
                 ) {
+
                     item {
                         var expanded by remember { mutableStateOf(false) }
                         Card(Modifier.padding(8.dp)) {
                             Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                if (categories3.value.isEmpty()){
-                                    readCategories3()
+                                if (sections.value.isEmpty()){
+                                    readSections()
                                 }
                                 expanded = !expanded
                             },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                Text(category3?.name ?: "اختر قسم داخلي")
+                                Text(section?.name ?: "اختر قسم")
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             }
                             if (expanded)
-                                categories3.value.filterNot { sectionItem ->
-                                    CsPsSCRs.value.any { storeCategory ->
-                                        storeCategory.category3Id == sectionItem.id // Compare by the 'name' field
+                                sections.value.filterNot { sectionItem ->
+                                    storeSections.value.any { storeCategory ->
+                                        storeCategory.sectionId == sectionItem.id // Compare by the 'name' field
                                     }
                                 }.forEach { item ->
                                     DropdownMenuItem(onClick = {
-                                        category3 = item
+                                        section = item
                                         expanded = false // Close the dropdown after selection
                                     }, text = {
                                         Text(item.name)
@@ -319,10 +350,9 @@ private fun add(category3Id: String) {
                                 }
 
                         }
-
-                        if (category3 != null)
+                        if (section != null )
                             Button(onClick = {
-                                add(category3!!.id.toString())
+                                add(section!!.id.toString())
                             },
                                 Modifier.fillMaxWidth()) {
                                 Text("حفظ")
@@ -330,28 +360,6 @@ private fun add(category3Id: String) {
                     }
                 }
             }
-        }
-    }
-
-    fun readCategories3() {
-        stateController.startAud()
-
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("sectionId", sectionStoreCategory.sectionId.toString())
-            .addFormDataPart("storeId", "1")
-            .build()
-
-        requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getCategories3", { code, fail ->
-            stateController.errorStateAUD(fail)
-        }
-        ) { data ->
-            categories3.value =
-                MyJson.IgnoreUnknownKeys.decodeFromString(
-                    data
-                )
-
-            stateController.successStateAUD()
         }
     }
 }

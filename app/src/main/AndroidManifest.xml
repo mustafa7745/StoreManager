@@ -28,22 +28,22 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".SharedStoresCategoriesActivity"
+            android:name=".activities.StoreCategoriesActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".StoresActivity"
+            android:name=".activities.StoresActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".SharedStoresSectionsActivity"
+            android:name=".activities.StoreSectionsActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".SharedStoresNestedSectionsActivity"
+            android:name=".activities.StoreNestedSectionsActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
@@ -52,9 +52,6 @@
             android:exported="false"/>
         <activity
             android:name=".activities.MyProductsActivity"
-            android:exported="false"/>
-        <activity
-            android:name=".activities.MyCategoriesActivity"
             android:exported="false"/>
 
         <service

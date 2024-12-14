@@ -50,18 +50,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fekraplatform.storemanger.SelectedStore
-import com.fekraplatform.storemanger.SingletonStoreConfig
-import com.fekraplatform.storemanger.models.CsPsSCR
-import com.fekraplatform.storemanger.models.MyProduct
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.Option
 import com.fekraplatform.storemanger.models.Product
+import com.fekraplatform.storemanger.models.ProductToSelect
 import com.fekraplatform.storemanger.models.StoreProduct
 import com.fekraplatform.storemanger.models.ProductImage
 import com.fekraplatform.storemanger.models.ProductOption
-import com.fekraplatform.storemanger.models.Scp
-import com.fekraplatform.storemanger.models.StoreProducts
+import com.fekraplatform.storemanger.models.StoreNestedSection
 import com.fekraplatform.storemanger.shared.CustomImageView
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.MainCompose1
@@ -69,8 +65,8 @@ import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.U1R
-import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.storage.ProductsStorageDBManager
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import kotlinx.serialization.Serializable
 import okhttp3.MediaType
@@ -79,18 +75,21 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okio.BufferedSink
 import java.io.InputStream
+import java.time.Duration
 
 
 class ProductsActivity : ComponentActivity() {
+    val productsStorageDBManager = ProductsStorageDBManager(this)
 
     val stateController = StateController()
     val requestServer = RequestServer(this)
-    private val storeProducts = mutableStateOf<List<StoreProducts>>(listOf())
+    private val storeProducts = mutableStateOf<List<StoreProduct>>(listOf())
     private val storeCategories = mutableStateOf<List<StoreCategory>>(listOf())
-    //
-    private val products = mutableStateOf<List<Product>>(listOf())
 
-//    lateinit var selectedProduct: Product
+//        private val products = mutableStateOf<List<Product>>(listOf())
+    private val productsToSelect = mutableStateOf<List<ProductToSelect>>(listOf())
+
+   //    lateinit var selectedProduct: Product
 
     val UPDATE_PRODUCT_NAME = 1
     val UPDATE_PRODUCT_DESCRIPTION = 2
@@ -112,7 +111,7 @@ class ProductsActivity : ComponentActivity() {
     lateinit var selectedProductOption:ProductOption
     var selectedOption:Option? = null
     private val options = mutableStateOf<List<Option>>(listOf())
-    lateinit var scr: Scp
+    lateinit var storeNestedSection: StoreNestedSection
 
 
     @OptIn(ExperimentalFoundationApi::class)
@@ -120,10 +119,10 @@ class ProductsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val intent = intent
-        val str = intent.getStringExtra("scr")
+        val str = intent.getStringExtra("storeNestedSection")
         if (str != null) {
             try {
-                scr = MyJson.IgnoreUnknownKeys.decodeFromString(str)
+                storeNestedSection = MyJson.IgnoreUnknownKeys.decodeFromString(str)
             }catch (e:Exception){
                 finish()
             }
@@ -131,30 +130,88 @@ class ProductsActivity : ComponentActivity() {
             finish()
         }
 
-        read()
+        val stId=  if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId
+
+        if (productsStorageDBManager.isSet(stId,storeNestedSection.id.toString())){
+            val diff =
+                Duration.between(productsStorageDBManager.getDate(stId,storeNestedSection.id.toString()), getCurrentDate()).toMinutes()
+            if (diff <= 1){
+
+//                val storeProduct : List<StoreProduct>
+
+                val res = productsStorageDBManager.getStoreProducts(stId,storeNestedSection.id.toString())
+                res.forEach {
+                    Log.e("res",it.options.joinToString(","){it.storeProductId.toString() })
+                }
+
+                storeProducts.value = res
+                stateController.successState()
+//
+            }else{
+                read(stId)
+            }
+        }else{
+            read(stId)
+        }
+
+
+
 
         setContent {
             StoreMangerTheme{
                 MainCompose1(
                     0.dp, stateController ,this,
-                    { read() },
+                    { read(stId) },
                 ){
+
                     LazyColumn(Modifier.fillMaxSize()) {
 
+                        item {
+                            SingletonStoreConfig.EditModeCompose()
+                        }
 
 
                         item {
                             Button(onClick = {
-
+                                if (!SingletonStoreConfig.isSharedStore())
                                 isShowAddProductStore.value = true
+
                             }) {
                                 Text("add")
                             }
                             HorizontalDivider()
                         }
-                        itemsIndexed(storeProducts.value){index, item ->
-                            item.storeProducts.forEach { storeProduct: StoreProduct ->
-                                var isExpanded by remember { mutableStateOf(true) }
+//                        val r = storeProducts.value
+//                        val prods = if (SingletonStoreConfig.isSharedStore()){
+//                            if (SingletonHome.isEditMode.value)
+//                                r
+//                             else
+//                            r.filterNot { it.storeProductId in SingletonStoreConfig.products.value }
+//                        }
+//                        else r
+
+//                        if (SingletonStoreConfig.isSharedStore()){
+//                            if (SingletonHome.isEditMode.value) {
+//                                storeProducts.value
+//                            }
+//                            else {
+//                                // In non-edit mode, filter products based on the options
+//                                storeProducts.value.filter { product ->
+//                                    // Ensure product has non-empty options and at least one option matches storeProductId in SingletonStoreConfig.products.value
+//                                    product.options.isNotEmpty() && product.options.any { option ->
+//                                        option.storeProductId in SingletonStoreConfig.products.value
+//                                    }
+//                                }
+//                            }
+//                        }
+//                        else{
+//                            storeProducts.value
+//                        }
+
+
+
+                        itemsIndexed(storeProducts.value){index, storeProduct ->
+
                                 Card (
                                     Modifier
                                         .fillMaxWidth()
@@ -165,6 +222,7 @@ class ProductsActivity : ComponentActivity() {
 //                                    isShowSubProduct.value = true
 ////                                    goToAddToCart(product)
                                         }){
+                                    var isExpanded by remember { mutableStateOf(true) }
                                     Row (
                                         Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
@@ -209,8 +267,10 @@ class ProductsActivity : ComponentActivity() {
                                         ){
                                             Text("الخيارات")
                                             IconButton(onClick = {
-                                                selectedStoreProduct = storeProduct
-                                                isShowAddProductOption.value = true
+                                                if (!SingletonStoreConfig.isSharedStore()){
+                                                    selectedStoreProduct = storeProduct
+                                                    isShowAddProductOption.value = true
+                                                }
                                             }) {
                                                 Icon(
                                                     modifier =
@@ -233,6 +293,7 @@ class ProductsActivity : ComponentActivity() {
                                             }
                                             if (optionIds.isNotEmpty()){
                                                 IconButton(onClick = {
+                                                    if (!SingletonStoreConfig.isSharedStore())
                                                     deleteProductOptions(optionIds,{
                                                         optionIds = emptyList()
                                                     })
@@ -261,7 +322,30 @@ class ProductsActivity : ComponentActivity() {
                                             }
                                         }
 
-                                        storeProduct.options.forEach { productOption ->
+//                                        val opts = if (SingletonStoreConfig.isSharedStore()){
+//                                            if (SingletonHome.isEditMode.value) {
+//                                                Log.e("st1",storeProduct.options.toString())
+//                                                storeProduct.options
+//                                            }
+//                                            else {
+//                                                Log.e("st2",storeProduct.options.filterNot { it.storeProductId in SingletonStoreConfig.products.value }.toString())
+//                                                storeProduct.options.filterNot { it.storeProductId in SingletonStoreConfig.products.value }
+//
+//                                            }
+//                                        }
+//                                        else{
+//                                            Log.e("st3",storeProduct.options.toString())
+//                                            storeProduct.options
+//                                        }
+
+//                                        isShow = if (SingletonStoreConfig.isSharedStore()) {
+//                                            opts.isNotEmpty()
+//                                        } else {
+//                                            true // Assuming you want to show all products if it's not a shared store
+//                                        }
+
+
+                                       storeProduct.options.forEach { productOption ->
                                             Row (
                                                 Modifier
                                                     .fillMaxWidth()
@@ -270,16 +354,21 @@ class ProductsActivity : ComponentActivity() {
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ){
                                                 Text(productOption.name,Modifier.clickable {
-                                                    selectedProductOption = productOption
-                                                    selectedStoreProduct = storeProduct
-                                                    SELECTED_UPDATE = UPDATE_OPTION_NAME
-                                                    isShowUpdateText.value = true
+                                                    if (!SingletonStoreConfig.isSharedStore()){
+                                                        selectedProductOption = productOption
+                                                        selectedStoreProduct = storeProduct
+                                                        SELECTED_UPDATE = UPDATE_OPTION_NAME
+                                                        isShowUpdateText.value = true
+                                                    }
+
                                                 })
                                                 Text(productOption.price,Modifier.clickable {
-                                                    selectedProductOption = productOption
-                                                    selectedStoreProduct = storeProduct
-                                                    SELECTED_UPDATE = UPDATE_OPTION_PRICE
-                                                    isShowUpdateText.value = true
+                                                    if (!SingletonStoreConfig.isSharedStore()){
+                                                        selectedProductOption = productOption
+                                                        selectedStoreProduct = storeProduct
+                                                        SELECTED_UPDATE = UPDATE_OPTION_PRICE
+                                                        isShowUpdateText.value = true
+                                                    }
                                                 })
                                                 Checkbox(checked = optionIds.find { it == productOption.storeProductId } != null, onCheckedChange = {
                                                     val itemC = optionIds.find { it == productOption.storeProductId }
@@ -290,7 +379,49 @@ class ProductsActivity : ComponentActivity() {
                                                     }
                                                 })
                                             }
-                                            HorizontalDivider()
+                                            if (SingletonHome.isEditMode.value && SingletonStoreConfig.isSharedStore()){
+                                                if (SingletonStoreConfig.products.value.any { number -> number == productOption.storeProductId }){
+                                                    if (! SingletonHome. products.value.any { it == productOption.storeProductId }) {
+                                                        Text(
+                                                            "تمت الاضافة بانتظار التأكيد",
+                                                            Modifier
+
+                                                                .clickable {
+                                                                    SingletonHome. products.value +=productOption.storeProductId
+                                                                })
+                                                    }
+                                                    else{
+                                                        Text(
+                                                            "اضافة",
+                                                            Modifier
+//                                                                .align(Alignment.BottomEnd)
+                                                                .clickable {
+//                                                                        Log.e("rtrt", SingletonHome. categories.toString())
+                                                                    SingletonHome.products.value -= productOption.storeProductId
+//                                                                        Log.e("rtrt", SingletonHome. categories.toString())
+
+                                                                })
+                                                    }
+                                                }
+                                                else{
+                                                    if ( SingletonHome. products.value.any { it == productOption.storeProductId }){
+                                                        Text("تمت الحذف بانتظار التأكيد",
+                                                            Modifier
+//                                                                .align(Alignment.BottomEnd)
+                                                                .clickable {
+                                                                    SingletonHome.products.value -= productOption.storeProductId
+                                                                })
+                                                    }else{
+                                                        Text("حذف",
+                                                            Modifier
+                                                                .clickable {
+                                                                    SingletonHome. products.value+=productOption.storeProductId
+                                                                })
+                                                    }
+
+                                                }
+                                            }
+                                            HorizontalDivider(Modifier.padding(8.dp))
                                         }
 
 
@@ -400,11 +531,9 @@ class ProductsActivity : ComponentActivity() {
 //                            Column {
 //
 //                            }
-
-                        }
-
                     }
-//                    if (isShowSubProduct.value)modalProduct()
+
+
                     if (isShowUpdateImage.value)modalUpdateImage()
                     if (isShowAddImage.value)modalAddImage()
                     if (isShowDeleteImage.value)modalDeleteImage()
@@ -418,13 +547,13 @@ class ProductsActivity : ComponentActivity() {
             }
         }
     }
-    fun read(){
+    fun read(storeId:String){
         stateController.startRead()
 
-        Log.e("sec",scr.toString())
+        Log.e("sec",storeNestedSection.toString())
         val body = builderForm3()
-            .addFormDataPart("CsPsSCRId", scr.id.toString())
-            .addFormDataPart("storeId",SelectedStore.store.value!!.id.toString())
+            .addFormDataPart("storeNestedSectionId", storeNestedSection.id.toString())
+            .addFormDataPart("storeId",storeId)
             .build()
 
         requestServer.request2(body,"readMain",{code,fail->
@@ -432,10 +561,22 @@ class ProductsActivity : ComponentActivity() {
         }
         ){data->
 
-            storeProducts.value =
+            val result:List<StoreProduct> =
                 MyJson.IgnoreUnknownKeys.decodeFromString(
                     data
                 )
+
+            productsStorageDBManager.clearAllData(storeNestedSection.id.toString())
+
+            productsStorageDBManager.addStoreProducts(result,
+               if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId
+                ,storeNestedSection.id)
+
+            result.forEach {
+                Log.e("res0",it.options.joinToString(","){it.storeProductId.toString() })
+            }
+
+            storeProducts.value = result
 
             stateController.successState()
         }
@@ -519,7 +660,7 @@ class ProductsActivity : ComponentActivity() {
         var price by remember { mutableStateOf("") }
         var option by remember { mutableStateOf<Option?>(null) }
         var storeCategory by remember { mutableStateOf<StoreCategory?>(null) }
-        var product by remember { mutableStateOf<Product?>(null) }
+        var product by remember { mutableStateOf<ProductToSelect?>(null) }
         ModalBottomSheet(
             onDismissRequest = { isShowAddProductStore.value = false }) {
             Box(
@@ -545,12 +686,16 @@ class ProductsActivity : ComponentActivity() {
                     item {
                         var expanded by remember { mutableStateOf(false) }
                         Card(Modifier.padding(8.dp)) {
-                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                if (products.value.isEmpty()){
-                                    readProducts()
-                                }
-                                expanded = !expanded
-                            },
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        if (productsToSelect.value.isEmpty()) {
+                                            readProducts()
+                                        }
+                                        expanded = !expanded
+                                    },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
@@ -558,11 +703,10 @@ class ProductsActivity : ComponentActivity() {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             }
                             if (expanded)
-                                products.value.filterNot { product1 ->
-                                    storeProducts.value.any { storeProducts1 ->
-                                        storeProducts1.storeProducts.find { it.productId == product1.id } != null
+                                productsToSelect.value.filterNot { product1 ->
+                                    storeProducts.value.any { it.productId == product1.id }
                                     // Compare by the 'name' field
-                                    }
+
                                 }.forEach { item ->
                                     DropdownMenuItem(onClick = {
                                         product = item
@@ -604,12 +748,16 @@ class ProductsActivity : ComponentActivity() {
                     item {
                         var expanded by remember { mutableStateOf(false) }
                         Card(Modifier.padding(8.dp)) {
-                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                if (options.value.isEmpty()){
-                                    readOptions()
-                                }
-                                expanded = !expanded
-                            },
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        if (options.value.isEmpty()) {
+                                            readOptions()
+                                        }
+                                        expanded = !expanded
+                                    },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
@@ -728,12 +876,16 @@ class ProductsActivity : ComponentActivity() {
                     item {
                         var expanded by remember { mutableStateOf(false) }
                         Card(Modifier.padding(8.dp)) {
-                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                if (options.value.isEmpty()){
-                                    readOptions()
-                                }
-                                expanded = !expanded
-                            },
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        if (options.value.isEmpty()) {
+                                            readOptions()
+                                        }
+                                        expanded = !expanded
+                                    },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
@@ -889,6 +1041,7 @@ class ProductsActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.Center
                 ) {
                     if (SELECTED_UPDATE != UPDATE_OPTION_NAME)
+
                     item {
                         TextField(value = value , onValueChange = {
                          value = it
@@ -1111,9 +1264,7 @@ class ProductsActivity : ComponentActivity() {
 //            Log.e("post",storeProducts.value.toString())
 
 
-            storeProducts.value = storeProducts.value.map { storeProduct ->
-                // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
+            storeProducts.value = storeProducts.value.map { product ->
                     // Update the images of each product
                     val updatedImages = product.images.map { image ->
                         // Check if the image ID matches the result and update the image
@@ -1127,9 +1278,6 @@ class ProductsActivity : ComponentActivity() {
                     }
                     // Return a new product with the updated images
                     product.copy(images = updatedImages)
-                }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
             }
 
 
@@ -1186,18 +1334,12 @@ class ProductsActivity : ComponentActivity() {
             stateController.errorStateAUD(fail)
         }
         ){
-            storeProducts.value = storeProducts.value.map { storeProduct ->
-                // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
-                    // Update the images of each product
-                    val updatedImages = product.images.toMutableList()  // Convert to mutable list to add new images
-                    updatedImages.remove(selectedImage)
+            storeProducts.value = storeProducts.value.map { product ->
+                val updatedImages = product.images.toMutableList()  // Convert to mutable list to add new images
+                updatedImages.remove(selectedImage)
 
-                    // Return a new product with the updated images
-                    product.copy(images = updatedImages)
-                }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
+                // Return a new product with the updated images
+                product.copy(images = updatedImages)
             }
 
 
@@ -1294,9 +1436,7 @@ class ProductsActivity : ComponentActivity() {
 //            Log.e("post",storeProducts.value.toString())
 
 
-            storeProducts.value = storeProducts.value.map { storeProduct ->
-                // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
+            storeProducts.value = storeProducts.value.map { product ->
                     // Update the images of each product
                     val updatedImages = product.images.map { image ->
                         // Check if the image ID matches the result and update the image
@@ -1319,9 +1459,6 @@ class ProductsActivity : ComponentActivity() {
 
                     // Return a new product with the updated images
                     product.copy(images = updatedImages)
-                }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
             }
 
 
@@ -1371,7 +1508,7 @@ class ProductsActivity : ComponentActivity() {
             .setType(MultipartBody.FORM)
             .addFormDataPart("productId",productId.toString())
             .addFormDataPart("optionId", optionId.toString())
-            .addFormDataPart("CsPsSCRId", scr.id.toString())
+            .addFormDataPart("CsPsSCRId", storeNestedSection.id.toString())
             .addFormDataPart("price",price.toString())
             .build()
 
@@ -1386,9 +1523,7 @@ class ProductsActivity : ComponentActivity() {
                 it
             )
 
-            storeProducts.value = storeProducts.value.map { storeProduct ->
-                // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
+            storeProducts.value = storeProducts.value.map { product ->
                     // Check if the productId matches the selectedProduct's productId
                     val updatedOptions = product.options.toMutableList()  // Convert options to a mutable list
 
@@ -1399,9 +1534,6 @@ class ProductsActivity : ComponentActivity() {
 
                     // Return a new product with the updated options (images)
                     product.copy(options = updatedOptions)
-                }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
             }
 
 
@@ -1429,16 +1561,13 @@ class ProductsActivity : ComponentActivity() {
             val result:StringResult =  MyJson.IgnoreUnknownKeys.decodeFromString(
                 it
             )
-            storeProducts.value = storeProducts.value.map { storeProduct ->
+            storeProducts.value = storeProducts.value.map { product ->
                 // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
                     if (selectedStoreProduct.productId == product.productId){
                         product.copy(productName = result.result)
                     }
                     else product
-                }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
+
             }
 
             isShowUpdateText.value = false
@@ -1461,28 +1590,26 @@ class ProductsActivity : ComponentActivity() {
             val result:StringResult =  MyJson.IgnoreUnknownKeys.decodeFromString(
                 it
             )
-            storeProducts.value = storeProducts.value.map { storeProduct ->
+            storeProducts.value = storeProducts.value.map { product ->
                 // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
                     if (selectedStoreProduct.productId == product.productId){
                         product.copy(productDescription = result.result)
                     }
                     else product
                 }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
+
             }
 
             isShowUpdateText.value = false
             stateController.successStateAUD("تم التحديث بنجاح")
-        }
+
     }
     fun updateProductOptionName(value:String) {
         stateController.startAud()
         //
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeProductId",selectedStoreProduct.storeProductId.toString())
+            .addFormDataPart("storeProductId",selectedProductOption.storeProductId.toString())
             .addFormDataPart("optionId", value.toString())
             .build()
 
@@ -1493,9 +1620,7 @@ class ProductsActivity : ComponentActivity() {
             val result:StringResult =  MyJson.IgnoreUnknownKeys.decodeFromString(
                 it
             )
-            storeProducts.value = storeProducts.value.map { storeProduct ->
-                // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
+            storeProducts.value = storeProducts.value.map { product ->
                     val updatedOptions = product.options.map { option ->
                         if (selectedProductOption.optionId == option.optionId){
                             option.copy(name = result.result)
@@ -1504,8 +1629,7 @@ class ProductsActivity : ComponentActivity() {
                         }
                     }
                     product.copy(options = updatedOptions)
-                }
-                storeProduct.copy(storeProducts = updatedProducts)
+
             }
 
             isShowUpdateText.value = false
@@ -1528,9 +1652,8 @@ class ProductsActivity : ComponentActivity() {
             val result:StringResult =  MyJson.IgnoreUnknownKeys.decodeFromString(
                 it
             )
-            storeProducts.value = storeProducts.value.map { storeProduct ->
+            storeProducts.value = storeProducts.value.map { product ->
                 // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
                     val updatedOptions = product.options.map { option ->
                         if (selectedProductOption.optionId == option.optionId){
                             option.copy(price = result.result)
@@ -1539,8 +1662,7 @@ class ProductsActivity : ComponentActivity() {
                         }
                     }
                     product.copy(options = updatedOptions)
-                }
-                storeProduct.copy(storeProducts = updatedProducts)
+
             }
 
             isShowUpdateText.value = false
@@ -1595,18 +1717,15 @@ class ProductsActivity : ComponentActivity() {
             stateController.errorStateAUD(fail)
         }
         ){it->
-            storeProducts.value = storeProducts.value.map { storeProduct ->
+            storeProducts.value = storeProducts.value.map { product ->
                 // Update the products of each store product
-                val updatedProducts = storeProduct.storeProducts.map { product ->
                     // Update the images of each product
                     val updatedOptions = product.options.filterNot { it1 -> it1.storeProductId in ids }
                     // Use filterNot to remove options with storeProductId in ids
 
                     // Return a new product with the updated options
                     product.copy(options = updatedOptions)
-                }
-                // Return a new StoreProduct with the updated products
-                storeProduct.copy(storeProducts = updatedProducts)
+
             }
 
             onDone()
@@ -1619,7 +1738,7 @@ class ProductsActivity : ComponentActivity() {
         stateController.startAud()
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("category3Id", scr.category3Id.toString())
+            .addFormDataPart("nestedSectionId", storeNestedSection.nestedSectionId.toString())
             .addFormDataPart("storeId", "1")
             .build()
 
@@ -1628,7 +1747,7 @@ class ProductsActivity : ComponentActivity() {
         }
         ) { data ->
 
-            products.value =
+            productsToSelect.value =
                 MyJson.IgnoreUnknownKeys.decodeFromString(
                     data
                 )

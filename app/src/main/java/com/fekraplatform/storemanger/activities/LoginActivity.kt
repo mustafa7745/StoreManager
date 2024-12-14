@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
-import com.fekraplatform.storemanger.StoresActivity
 import com.fekraplatform.storemanger.shared.AToken
 import com.fekraplatform.storemanger.shared.AppInfoMethod
 import com.fekraplatform.storemanger.shared.MainCompose2

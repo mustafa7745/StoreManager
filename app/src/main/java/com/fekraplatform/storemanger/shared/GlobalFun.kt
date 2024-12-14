@@ -17,6 +17,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,21 +59,17 @@ fun MainCompose1(
     onSuccess: @Composable() (() -> Unit)
 ) {
     var verticalArrangement: Arrangement.Vertical by remember { mutableStateOf(Arrangement.Center) }
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = padding),
-        verticalArrangement = verticalArrangement,
-        horizontalAlignment = Alignment.CenterHorizontally
+//        verticalArrangement = verticalArrangement,
+//        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (stateController.isLoadingAUD.value) {
             Dialog(onDismissRequest = { }) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    CircularProgressIndicator()
+                Box (Modifier.fillMaxSize()){
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
@@ -90,22 +87,25 @@ fun MainCompose1(
             onSuccess()
         }
         if (stateController.isLoadingRead.value) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
 
 
 //            LoadingCompose()
         }
         if (stateController.isErrorRead.value) {
-            Text(text = stateController.errorRead.value)
-            Button(onClick = {
-                stateController.errorRead.value = ""
-                stateController.isErrorRead.value = false
-                stateController.isLoadingRead.value = true
-                read()
+            Column(Modifier.align(Alignment.Center)) {
+                Text(text = stateController.errorRead.value)
+                Button(onClick = {
+                    stateController.errorRead.value = ""
+                    stateController.isErrorRead.value = false
+                    stateController.isLoadingRead.value = true
+                    read()
+                }) {
+                    Text(text = "جرب مرة اخرى")
+                }
             }
-            ) {
-                Text(text = "جرب مرة اخرى")
-            }
+
+
         }
     }
 }

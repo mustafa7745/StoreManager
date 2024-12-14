@@ -7,7 +7,7 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
-import com.fekraplatform.storemanger.StoresActivity
+import com.fekraplatform.storemanger.activities.StoresActivity
 import com.fekraplatform.storemanger.activities.LoginActivity
 import com.fekraplatform.storemanger.models.ErrorMessage
 import kotlinx.coroutines.Dispatchers
