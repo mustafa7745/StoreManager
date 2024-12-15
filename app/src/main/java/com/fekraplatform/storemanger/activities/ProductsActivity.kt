@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -50,10 +52,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.Option
 import com.fekraplatform.storemanger.models.Product
-import com.fekraplatform.storemanger.models.ProductToSelect
 import com.fekraplatform.storemanger.models.StoreProduct
 import com.fekraplatform.storemanger.models.ProductImage
 import com.fekraplatform.storemanger.models.ProductOption
@@ -69,6 +71,7 @@ import com.fekraplatform.storemanger.shared.builderForm3
 import com.fekraplatform.storemanger.storage.ProductsStorageDBManager
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -87,7 +90,7 @@ class ProductsActivity : ComponentActivity() {
     private val storeCategories = mutableStateOf<List<StoreCategory>>(listOf())
 
 //        private val products = mutableStateOf<List<Product>>(listOf())
-    private val productsToSelect = mutableStateOf<List<ProductToSelect>>(listOf())
+    private val products = mutableStateOf<List<Product>>(listOf())
 
    //    lateinit var selectedProduct: Product
 
@@ -109,9 +112,11 @@ class ProductsActivity : ComponentActivity() {
     lateinit var selectedImage : ProductImage
     lateinit var selectedStoreProduct:StoreProduct
     lateinit var selectedProductOption:ProductOption
-    var selectedOption:Option? = null
+    lateinit var selectedProduct:Product
     private val options = mutableStateOf<List<Option>>(listOf())
     lateinit var storeNestedSection: StoreNestedSection
+    val isShowAddCatgory = mutableStateOf(false)
+    val isShowChooseOptionAndPrice = mutableStateOf(false)
 
 
     @OptIn(ExperimentalFoundationApi::class)
@@ -171,16 +176,6 @@ class ProductsActivity : ComponentActivity() {
                         }
 
 
-                        item {
-                            Button(onClick = {
-                                if (!SingletonStoreConfig.isSharedStore())
-                                isShowAddProductStore.value = true
-
-                            }) {
-                                Text("add")
-                            }
-                            HorizontalDivider()
-                        }
 //                        val r = storeProducts.value
 //                        val prods = if (SingletonStoreConfig.isSharedStore()){
 //                            if (SingletonHome.isEditMode.value)
@@ -528,6 +523,24 @@ class ProductsActivity : ComponentActivity() {
                                 }
 
                             }
+                        item {
+                            Card(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp)
+                                    .padding(8.dp)
+                            ) {
+                                Box (
+                                    Modifier
+                                        .fillMaxSize()
+                                        .clickable {
+                                            isShowAddCatgory.value = true
+                                        }
+                                ){
+                                    Text("+", modifier = Modifier.align(Alignment.Center))
+                                }
+                            }
+                        }
 //                            Column {
 //
 //                            }
@@ -540,6 +553,8 @@ class ProductsActivity : ComponentActivity() {
                     if (isShowUpdateText.value)modalUpdateText()
                     if(isShowAddProductOption.value)modalAddProductOption()
                     if(isShowAddProductStore.value)modalAddProductStore()
+                    if (isShowAddCatgory.value) modalAddNewProduct()
+                    if (isShowChooseOptionAndPrice.value) modalChooseOptionAndPrice()
 
                 }
 
@@ -660,7 +675,7 @@ class ProductsActivity : ComponentActivity() {
         var price by remember { mutableStateOf("") }
         var option by remember { mutableStateOf<Option?>(null) }
         var storeCategory by remember { mutableStateOf<StoreCategory?>(null) }
-        var product by remember { mutableStateOf<ProductToSelect?>(null) }
+        var product by remember { mutableStateOf<Product?>(null) }
         ModalBottomSheet(
             onDismissRequest = { isShowAddProductStore.value = false }) {
             Box(
@@ -691,7 +706,7 @@ class ProductsActivity : ComponentActivity() {
                                     .fillMaxWidth()
                                     .padding(8.dp)
                                     .clickable {
-                                        if (productsToSelect.value.isEmpty()) {
+                                        if (products.value.isEmpty()) {
                                             readProducts()
                                         }
                                         expanded = !expanded
@@ -703,7 +718,7 @@ class ProductsActivity : ComponentActivity() {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             }
                             if (expanded)
-                                productsToSelect.value.filterNot { product1 ->
+                                products.value.filterNot { product1 ->
                                     storeProducts.value.any { it.productId == product1.id }
                                     // Compare by the 'name' field
 
@@ -850,7 +865,6 @@ class ProductsActivity : ComponentActivity() {
 
         var price by remember { mutableStateOf("") }
         var option by remember { mutableStateOf<Option?>(null) }
-        var storeCategory by remember { mutableStateOf<StoreCategory?>(null) }
         ModalBottomSheet(
             onDismissRequest = { isShowAddProductOption.value = false }) {
             Box(
@@ -1500,7 +1514,7 @@ class ProductsActivity : ComponentActivity() {
 //            }
 //        })
     }
-    private fun addproductOption(price: String, optionId: Int,productId:Int) {
+    private fun addproductOption(price: String, optionId: Int,productId:Int , getWithProduct:Boolean = false) {
 
         stateController.startAud()
 
@@ -1508,22 +1522,31 @@ class ProductsActivity : ComponentActivity() {
             .setType(MultipartBody.FORM)
             .addFormDataPart("productId",productId.toString())
             .addFormDataPart("optionId", optionId.toString())
-            .addFormDataPart("CsPsSCRId", storeNestedSection.id.toString())
+            .addFormDataPart("storeNestedSectionId", storeNestedSection.id.toString())
             .addFormDataPart("price",price.toString())
+            .addFormDataPart("getWithProduct",if (getWithProduct)"1" else "0")
             .build()
 
 //        val urli = "https://user2121.greenland-rest.com/public/api/v1/upload-image"
 
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addProductOption",{code,fail->
+        requestServer.request2(body,"addProductOption",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
-            val result:ProductOption =  MyJson.IgnoreUnknownKeys.decodeFromString(
-                it
-            )
 
-            storeProducts.value = storeProducts.value.map { product ->
+
+            if (getWithProduct){
+                val result:StoreProduct =  MyJson.IgnoreUnknownKeys.decodeFromString(
+                    it
+                )
+                storeProducts.value += result
+            }
+            else{
+                val result:ProductOption =  MyJson.IgnoreUnknownKeys.decodeFromString(
+                    it
+                )
+                storeProducts.value = storeProducts.value.map { product ->
                     // Check if the productId matches the selectedProduct's productId
                     val updatedOptions = product.options.toMutableList()  // Convert options to a mutable list
 
@@ -1534,14 +1557,19 @@ class ProductsActivity : ComponentActivity() {
 
                     // Return a new product with the updated options (images)
                     product.copy(options = updatedOptions)
+                }
             }
 
 
 
-            Log.e("jiamge",result.toString())
 
+
+//            Log.e("jiamge",result.toString())
+
+            isShowAddCatgory.value = false
+            isShowChooseOptionAndPrice.value = false
             isShowAddProductOption.value = false
-            stateController.successStateAUD("تم اضافة الصورة بنجاح")
+            stateController.successStateAUD("تمت الاضافة  بنجاح")
         }
     }
 
@@ -1742,16 +1770,244 @@ class ProductsActivity : ComponentActivity() {
             .addFormDataPart("storeId", "1")
             .build()
 
-        requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getProducts", { code, fail ->
+        requestServer.request2(body, "getProducts", { code, fail ->
             stateController.errorStateAUD(fail)
         }
         ) { data ->
 
-            productsToSelect.value =
+            products.value =
                 MyJson.IgnoreUnknownKeys.decodeFromString(
                     data
                 )
 
+            stateController.successStateAUD()
+        }
+    }
+
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun modalAddNewProduct() {
+        if (products.value.isEmpty()) {
+            readProducts()
+        }
+        ModalBottomSheet(
+            onDismissRequest = { isShowAddCatgory.value = false }) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 10.dp)
+            ){
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    item {
+                        var productName by remember { mutableStateOf("") }
+                        var productDescription by remember { mutableStateOf("") }
+                        Card(Modifier.padding(8.dp)){
+                            Row (Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ){
+                               Column {
+                                   OutlinedTextField(
+                                       modifier = Modifier.padding(8.dp),
+                                       value = productName,
+                                       label = {
+                                           Text("الاسم")
+                                       },
+                                       onValueChange = {
+                                           productName = it
+                                       }
+                                   )
+                                   OutlinedTextField(
+                                       modifier = Modifier.padding(8.dp),
+                                       value = productDescription,
+                                       label = {
+                                           Text("الوصف")
+                                       },
+                                       onValueChange = {
+                                           productDescription = it
+                                       }
+                                   )
+                               }
+                                IconButton(onClick = {
+                                    addProduct(productName,productDescription,{
+                                        productName = ""
+                                        productDescription = ""
+                                        products.value += it
+                                    })
+
+                                }) {
+                                    Icon(
+                                        modifier =
+                                        Modifier
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            )
+                                            .clip(
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            ),
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = ""
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    itemsIndexed(products.value){index,product->
+                        Card(Modifier.padding(8.dp)) {
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ){
+                                Text(product.name)
+                                Button(
+                                    enabled = !storeProducts.value.any { it.productId == product.id } && product.acceptedStatus != 0,
+                                    onClick = {
+                                        selectedProduct = product
+                                        isShowChooseOptionAndPrice.value = true
+//                                        addProduct(product.id.toString())
+                                    }) { Text(if (product.acceptedStatus == 0) "بانتظار الموافقة" else if (!storeProducts.value.any { it.productId == product.id }) "اضافة" else "تمت الاضافة") }
+
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun modalChooseOptionAndPrice() {
+        if (options.value.isEmpty()) {
+            readOptions()
+        }
+        var option by remember { mutableStateOf<Option?>(null) }
+        ModalBottomSheet(
+            onDismissRequest = { isShowChooseOptionAndPrice.value = false }) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 10.dp)
+            ){
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    item {
+                        var price by remember { mutableStateOf("") }
+                        Card(Modifier.padding(8.dp)){
+                            Row (Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ){
+                                Column {
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = price,
+                                        label = {
+                                            Text("السعر")
+                                        },
+                                        onValueChange = {
+                                            price = it
+                                        }
+                                    )
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = if(option!= null)  option!!.name else "لم يتم اختيار نوع بعد" ,
+                                        enabled = false,
+                                        label = {
+                                            Text("الخيار")
+                                        },
+                                        onValueChange = {
+//                                            price = it
+                                        }
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    if(option!= null)
+                                    addproductOption(price,option!!.id,selectedProduct.id,true)
+
+                                }) {
+                                    Icon(
+                                        modifier =
+                                        Modifier
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            )
+                                            .clip(
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            ),
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = ""
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    itemsIndexed(options.value){index,ops->
+                        Card(Modifier.padding(8.dp)) {
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ){
+                                Text(ops.name)
+                                Button(
+                                    onClick = {
+                                        option = ops
+//                                        addProduct(product.id.toString())
+                                    }) { Text("اختيار") }
+
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+    fun addProduct(name:String,description:String, onSuccess: (data: Product) -> Unit) {
+        stateController.startAud()
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("name",name)
+            .addFormDataPart("nestedSectionId",storeNestedSection.nestedSectionId.toString())
+            .addFormDataPart("description",description)
+            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .build()
+
+        requestServer.request2(body, "addProduct", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result: Product =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
+            onSuccess(result)
             stateController.successStateAUD()
         }
     }

@@ -39,21 +39,23 @@ data class Option(
 data class Product(
     val id:Int,
     val name: String,
-    val description: String?,
-    val images: List<ProductImage>
+    val acceptedStatus: Int
+//    val description: String?,
+//    val images: List<ProductImage>
 )
 
-@Serializable
-data class ProductToSelect(
-    val id:Int,
-    val name: String
-)
+//@Serializable
+//data class ProductToSelect(
+//    val id:Int,
+//    val name: String
+//)
 ////////
 @Serializable
 data class StoreCategory(
     val id:Int,
     val categoryId: Int,
-    val categoryName: String
+    val categoryName: String,
+
 )
 
 
