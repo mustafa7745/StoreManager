@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +16,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,8 +35,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.models.NestedSection
+import com.fekraplatform.storemanger.models.Section
 import com.fekraplatform.storemanger.models.StoreNestedSection
 import com.fekraplatform.storemanger.models.StoreSection
 import com.fekraplatform.storemanger.shared.MainCompose1
@@ -77,13 +86,6 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                         LazyColumn {
                             item {
                                 SingletonStoreConfig.EditModeCompose()
-                            }
-                            item {
-                                Button(onClick = {
-                                    isShowAddSection.value = true
-                                }) {
-                                    Text("add")
-                                }
                             }
 
                             val nestedCats = if (SingletonStoreConfig.isSharedStore()){
@@ -152,7 +154,24 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                                     }
                                 }
                             }
-
+                            item {
+                                Card(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(100.dp)
+                                        .padding(8.dp)
+                                ) {
+                                    Box (
+                                        Modifier
+                                            .fillMaxSize()
+                                            .clickable {
+                                                isShowAddSection.value = true
+                                            }
+                                    ){
+                                        Text("+", modifier = Modifier.align(Alignment.Center))
+                                    }
+                                }
+                            }
                         }
                         if (isShowAddSection.value) modalAddMyCategory()
 
@@ -254,10 +273,10 @@ private fun add(nestedSectionId: String) {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("nestedSectionId",nestedSectionId)
-            .addFormDataPart("sectionsStoreCategoryId",storeSection.id.toString())
+            .addFormDataPart("storeSectionId",storeSection.id.toString())
             .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addCsPsSCR",{code,fail->
+        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addStoreNestedSection",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
@@ -266,6 +285,8 @@ private fun add(nestedSectionId: String) {
             )
 
             storeNestedSections.value += result
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
+            SingletonHome.home.value!!.storeNestedSections += result
             isShowAddSection.value = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")
         }
@@ -274,8 +295,9 @@ private fun add(nestedSectionId: String) {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun modalAddMyCategory() {
-        var value by remember { mutableStateOf("") }
-        var category3 by remember { mutableStateOf<NestedSection?>(null) }
+        if (nestedSections.value.isEmpty()) {
+            readNestedSections()
+        }
         ModalBottomSheet(
             onDismissRequest = { isShowAddSection.value = false }) {
             Box(
@@ -288,50 +310,113 @@ private fun add(nestedSectionId: String) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     item {
-                        var expanded by remember { mutableStateOf(false) }
-                        Card(Modifier.padding(8.dp)) {
-                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                if (nestedSections.value.isEmpty()){
-                                    readCategories3()
+                        var nestedSectionName by remember { mutableStateOf("") }
+                        Card(Modifier.padding(8.dp)){
+                            Row (Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ){
+                                OutlinedTextField(
+                                    modifier = Modifier.padding(8.dp),
+                                    value = nestedSectionName,
+                                    onValueChange = {
+                                        nestedSectionName = it
+                                    }
+                                )
+                                IconButton(onClick = {
+                                    addNestedSection(nestedSectionName,{
+                                        nestedSectionName = ""
+                                        nestedSections.value += it
+                                    })
+
+                                }) {
+                                    Icon(
+                                        modifier =
+                                        Modifier
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            )
+                                            .clip(
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            ),
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = ""
+                                    )
                                 }
-                                expanded = !expanded
-                            },
+                            }
+                        }
+                    }
+
+                    itemsIndexed(nestedSections.value){index,nestedSection->
+                        Card(Modifier.padding(8.dp)) {
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                Text(category3?.name ?: "اختر قسم داخلي")
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                            }
-                            if (expanded)
-                                nestedSections.value.filterNot { sectionItem ->
-                                    storeNestedSections.value.any { storeCategory ->
-                                        storeCategory.nestedSectionId == sectionItem.id // Compare by the 'name' field
-                                    }
-                                }.forEach { item ->
-                                    DropdownMenuItem(onClick = {
-                                        category3 = item
-                                        expanded = false // Close the dropdown after selection
-                                    }, text = {
-                                        Text(item.name)
-                                    })
-                                }
+                                Text(nestedSection.name)
+                                Button(
+                                    enabled = !SingletonHome.home.value!!.storeNestedSections.any { it.nestedSectionId == nestedSection.id } && nestedSection.acceptedStatus != 0,
+                                    onClick = {
+                                        add(nestedSection.id.toString())
+                                    }) { Text(if (nestedSection.acceptedStatus == 0) "بانتظار الموافقة" else if (!SingletonHome.home.value!!.storeNestedSections.any { it.nestedSectionId == nestedSection.id }) "اضافة" else "تمت الاضافة") }
 
+                            }
                         }
-
-                        if (category3 != null)
-                            Button(onClick = {
-                                add(category3!!.id.toString())
-                            },
-                                Modifier.fillMaxWidth()) {
-                                Text("حفظ")
-                            }
                     }
+
+//                    item {
+//                        var expanded by remember { mutableStateOf(false) }
+//                        Card(Modifier.padding(8.dp)) {
+//                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
+//                                if (nestedSections.value.isEmpty()){
+//                                    readCategories3()
+//                                }
+//                                expanded = !expanded
+//                            },
+//                                verticalAlignment = Alignment.CenterVertically,
+//                                horizontalArrangement = Arrangement.SpaceBetween
+//                            ){
+//                                Text(category3?.name ?: "اختر قسم داخلي")
+//                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+//                            }
+//                            if (expanded)
+//                                nestedSections.value.filterNot { sectionItem ->
+//                                    storeNestedSections.value.any { storeCategory ->
+//                                        storeCategory.nestedSectionId == sectionItem.id // Compare by the 'name' field
+//                                    }
+//                                }.forEach { item ->
+//                                    DropdownMenuItem(onClick = {
+//                                        category3 = item
+//                                        expanded = false // Close the dropdown after selection
+//                                    }, text = {
+//                                        Text(item.name)
+//                                    })
+//                                }
+//
+//                        }
+//
+//                        if (category3 != null)
+//                            Button(onClick = {
+//                                add(category3!!.id.toString())
+//                            },
+//                                Modifier.fillMaxWidth()) {
+//                                Text("حفظ")
+//                            }
+//                    }
                 }
             }
         }
     }
 
-    fun readCategories3() {
+    fun readNestedSections() {
         stateController.startAud()
 
         val body = MultipartBody.Builder()
@@ -340,7 +425,7 @@ private fun add(nestedSectionId: String) {
             .addFormDataPart("storeId", "1")
             .build()
 
-        requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getCategories3", { code, fail ->
+        requestServer.request2(body, "getNestedSections", { code, fail ->
             stateController.errorStateAUD(fail)
         }
         ) { data ->
@@ -349,6 +434,24 @@ private fun add(nestedSectionId: String) {
                     data
                 )
 
+            stateController.successStateAUD()
+        }
+    }
+    fun addNestedSection(name:String, onSuccess: (data: NestedSection) -> Unit) {
+        stateController.startAud()
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("name",name)
+            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .addFormDataPart("sectionId", storeSection.id.toString())
+            .build()
+
+        requestServer.request2(body, "addNestedSection", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result: NestedSection = MyJson.IgnoreUnknownKeys.decodeFromString(data)
+            onSuccess(result)
             stateController.successStateAUD()
         }
     }

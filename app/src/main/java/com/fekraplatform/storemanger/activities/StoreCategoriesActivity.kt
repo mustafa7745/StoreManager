@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,13 +17,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,7 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.models.Category
 import com.fekraplatform.storemanger.models.Home
 import com.fekraplatform.storemanger.models.Store
@@ -159,7 +169,6 @@ object SingletonHome {
                     data
                 )
             home.value = result
-            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),storeId)
             Log.e("dsd", home.value.toString())
             Log.e("dsd2",result.toString())
             stateController.successState()
@@ -201,7 +210,7 @@ fun getCurrentDate(): LocalDateTime {
 }
 
 class StoreCategoriesActivity : ComponentActivity() {
-    private val storeCategories = mutableStateOf<List<StoreCategory>>(listOf())
+//    private val storeCategories = mutableStateOf<List<StoreCategory>>(listOf())
     private val categories = mutableStateOf<List<Category>>(listOf())
     val stateController = StateController()
     val requestServer = RequestServer(this)
@@ -274,6 +283,13 @@ class StoreCategoriesActivity : ComponentActivity() {
                             item {
                                 SingletonStoreConfig.EditModeCompose()
                             }
+//                            item {
+//                             Button(onClick = {
+//                                 isShowAddCatgory.value = true
+//                             }) {
+//                                 Text("add")
+//                             }
+//                            }
 
 //                            item {
 //                                Button(onClick = {
@@ -351,6 +367,24 @@ class StoreCategoriesActivity : ComponentActivity() {
                                                 }
                                             }
                                         }
+                            item {
+                                Card(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(100.dp)
+                                        .padding(8.dp)
+                                ) {
+                                    Box (
+                                        Modifier
+                                            .fillMaxSize()
+                                            .clickable {
+                                                isShowAddCatgory.value = true
+                                            }
+                                    ){
+                                        Text("+", modifier = Modifier.align(Alignment.Center))
+                                    }
+                                }
+                            }
 
 //                                }
 //                            }
@@ -436,7 +470,6 @@ class StoreCategoriesActivity : ComponentActivity() {
     }
 
 
-
     private fun goToSections(storeCategory: StoreCategory) {
     val intent = Intent(
         this,
@@ -445,25 +478,25 @@ class StoreCategoriesActivity : ComponentActivity() {
     intent.putExtra("storeCategory", MyJson.MyJson.encodeToString(storeCategory))
     startActivity(intent)
 }
-fun read() {
-    SingletonHome.stateController.startRead()
+fun addCategory(name:String, onSuccess: (data: Category) -> Unit) {
+    SingletonHome.stateController.startAud()
     val body = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
+        .addFormDataPart("name",name)
         .addFormDataPart("storeId", SingletonStoreConfig.storeId)
         .build()
 
-    requestServer.request2(body, "getStoreCategories", { code, fail ->
-        SingletonHome.stateController.errorStateRead(fail)
+    requestServer.request2(body, "addCategory", { code, fail ->
+        SingletonHome.stateController.errorStateAUD(fail)
     }
     ) { data ->
-        val result:Home =
+        val result:Category =
             MyJson.IgnoreUnknownKeys.decodeFromString(
                 data
             )
-
-       SingletonHome.home.value = result
-//        SingletonHome.homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result))
-        SingletonHome.stateController.successState()
+        onSuccess(result)
+        homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),SingletonStoreConfig.storeId)
+        SingletonHome.stateController.successStateAUD()
     }
 }
 fun readCategories() {
@@ -471,7 +504,7 @@ fun readCategories() {
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId", "1")
+            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
             .build()
 
         requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getCategories", { code, fail ->
@@ -486,13 +519,13 @@ fun readCategories() {
           SingletonHome.stateController.successStateAUD()
         }
     }
-private fun add(storeId: String,categoryId:String) {
+private fun add(categoryId:String) {
 
         stateController.startAud()
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId",storeId)
+            .addFormDataPart("storeId",SingletonStoreConfig.storeId)
             .addFormDataPart("categoryId",categoryId)
             .build()
 
@@ -500,11 +533,10 @@ private fun add(storeId: String,categoryId:String) {
             stateController.errorStateAUD(fail)
         }
         ){it->
-            val result: StoreCategory =  MyJson.IgnoreUnknownKeys.decodeFromString(
-                it
-            )
+            val result: StoreCategory =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
 
-            storeCategories.value += result
+            SingletonHome.home.value!!.storeCategories += result
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
             isShowAddCatgory.value = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")
         }
@@ -513,7 +545,9 @@ private fun add(storeId: String,categoryId:String) {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun modalAddMyCategory() {
-        var category by remember { mutableStateOf<Category?>(null) }
+        if (categories.value.isEmpty()) {
+            readCategories()
+        }
         ModalBottomSheet(
             onDismissRequest = { isShowAddCatgory.value = false }) {
             Box(
@@ -523,49 +557,71 @@ private fun add(storeId: String,categoryId:String) {
             ){
                 LazyColumn(
                     Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement = Arrangement.Top
                 ) {
                     item {
-                        var expanded by remember { mutableStateOf(false) }
+                        var categoryName by remember { mutableStateOf("") }
+                        Card(Modifier.padding(8.dp)){
+                            Row (Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ){
+                                OutlinedTextField(
+                                    modifier = Modifier.padding(8.dp),
+                                    value = categoryName,
+                                    onValueChange = {
+                                        categoryName = it
+                                    }
+                                )
+                                IconButton(onClick = {
+                                    addCategory(categoryName,{
+                                        categoryName = ""
+                                        categories.value += it
+                                    })
+
+                                }) {
+                                    Icon(
+                                        modifier =
+                                        Modifier
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            )
+                                            .clip(
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            ),
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = ""
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    itemsIndexed(categories.value){index,category->
                         Card(Modifier.padding(8.dp)) {
                             Row (
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(8.dp)
-                                    .clickable {
-                                        if (categories.value.isEmpty()) {
-                                            readCategories()
-                                        }
-                                        expanded = !expanded
-                                    },
+                                    .padding(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                Text(category?.name ?: "اختر فئة")
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                            }
-                            if (expanded)
-                                categories.value.filterNot { categoryItem ->
-                                    storeCategories.value.any { storeCategory ->
-                                        storeCategory.categoryId == categoryItem.id // Compare by the 'name' field
-                                    }
-                                }.forEach { item ->
-                                    DropdownMenuItem(onClick = {
-                                        category = item
-                                        expanded = false // Close the dropdown after selection
-                                    }, text = {
-                                        Text(item.name)
-                                    })
-                                }
+                                Text(category.name)
+                                Button(
+                                    enabled = !SingletonHome.home.value!!.storeCategories.any { it.categoryId == category.id } && category.acceptedStatus != 0,
+                                    onClick = {
+                                    add(category.id.toString())
+                                }) { Text(if (category.acceptedStatus == 0) "بانتظار الموافقة" else if (!SingletonHome.home.value!!.storeCategories.any { it.categoryId == category.id }) "اضافة" else "تمت الاضافة") }
 
-                        }
-                        if (category != null )
-                            Button(onClick = {
-                                add("1",category!!.id.toString())
-                            }) {
-                                Text("حفظ")
                             }
+                        }
                     }
+
                 }
             }
         }

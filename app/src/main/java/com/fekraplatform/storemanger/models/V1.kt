@@ -13,18 +13,21 @@ data class Store(
 @Serializable
 data class Category(
     val id: Int,
-    val name: String
+    val name: String,
+    val acceptedStatus : Int
 )
 
 @Serializable
 data class Section(
     val id: Int,
-    val name: String
+    val name: String,
+    val acceptedStatus : Int
 )
 @Serializable
 data class NestedSection(
     val id: Int,
-    val name: String
+    val name: String,
+    val acceptedStatus : Int
 )
 
 @Serializable
@@ -78,9 +81,9 @@ data class StoreSection(
 
 @Serializable
 data class Home(
-    val storeCategories: List<StoreCategory>,
-    val storeSections:List<StoreSection>,
-    val storeNestedSections:List<StoreNestedSection>
+    var storeCategories: List<StoreCategory>,
+    var storeSections:List<StoreSection>,
+    var storeNestedSections:List<StoreNestedSection>
 )
 
 @Serializable

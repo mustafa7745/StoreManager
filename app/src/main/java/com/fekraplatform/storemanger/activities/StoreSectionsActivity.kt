@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +16,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
+import com.fekraplatform.storemanger.models.Category
 import com.fekraplatform.storemanger.models.Section
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.StoreSection
@@ -80,33 +89,27 @@ class StoreSectionsActivity : ComponentActivity() {
                                 SingletonStoreConfig.EditModeCompose()
                             }
 
-                            item {
-                                Button(onClick = {
-                                    isShowAddSection.value = true
-                                }) {
-                                    Text("add")
-                                }
-                            }
+
 
 //                            val sec = if (SingletonStoreConfig.isSharedStore()){
 //                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeSections.filter { it.storeCategoryId == storeCategory.id } else SingletonHome.home.value!!.storeSections.filter { it.storeCategoryId == storeCategory.id }.filterNot { it.id in SingletonStoreConfig.sections.value }                            }
 //                            else SingletonHome.home.value!!.storeSections.filter { it.storeCategoryId == storeCategory.id }
 
-                            val sections = SingletonHome.home.value!!.storeSections
+                            val sectionList = SingletonHome.home.value!!.storeSections
                                 .filter { it.storeCategoryId == storeCategory.id }
-                                .let { sections ->
+                                .let { storeSectionList ->
                                     if (SingletonStoreConfig.isSharedStore()) {
                                         if (SingletonHome.isEditMode.value) {
-                                            sections
+                                            storeSectionList
                                         } else {
-                                            sections.filterNot { it.id in SingletonStoreConfig.sections.value }
+                                            storeSectionList.filterNot { it.id in SingletonStoreConfig.sections.value }
                                         }
                                     } else {
-                                        sections
+                                        storeSectionList
                                     }
                                 }
 
-                            itemsIndexed(sections){index, section ->
+                            itemsIndexed(sectionList){ index, section ->
 
                                 Card(
                                     Modifier
@@ -165,6 +168,25 @@ class StoreSectionsActivity : ComponentActivity() {
 
                                             }
                                         }
+                                    }
+                                }
+                            }
+
+                            item {
+                                Card(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(100.dp)
+                                        .padding(8.dp)
+                                ) {
+                                    Box (
+                                        Modifier
+                                            .fillMaxSize()
+                                            .clickable {
+                                                isShowAddSection.value = true
+                                            }
+                                    ){
+                                        Text("+", modifier = Modifier.align(Alignment.Center))
                                     }
                                 }
                             }
@@ -247,7 +269,7 @@ fun read() {
         .addFormDataPart("storeCategory1Id", storeCategory.id.toString())
         .build()
 
-    requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getSecionsStoreCategories", { code, fail ->
+    requestServer.request2(body, "getStoreSections", { code, fail ->
         stateController.errorStateRead(fail)
     }
     ) { data ->
@@ -264,11 +286,11 @@ fun readSections() {
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("category1Id", storeCategory.categoryId.toString())
+            .addFormDataPart("categoryId", storeCategory.categoryId.toString())
             .addFormDataPart("storeId", "1")
             .build()
 
-        requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getSections", { code, fail ->
+        requestServer.request2(body, "getSections", { code, fail ->
             stateController.errorStateAUD(fail)
         }
         ) { data ->
@@ -282,32 +304,36 @@ fun readSections() {
     }
 private fun add(sectionId: String) {
 
-//        stateController.startAud()
-//
-//        val body = MultipartBody.Builder()
-//            .setType(MultipartBody.FORM)
-//            .addFormDataPart("sectionId",sectionId)
-//            .addFormDataPart("storeCategory1Id",storeCategory.id.toString())
-//            .build()
-//
-//        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addSectionStoreCategory",{code,fail->
-//            stateController.errorStateAUD(fail)
-//        }
-//        ){it->
-//            val result: SectionStoreCategory =  MyJson.IgnoreUnknownKeys.decodeFromString(
-//                it
-//            )
-//
-//            storeSections.value += result
-//            isShowAddSection.value = false
-//            stateController.successStateAUD("تمت الاضافه  بنجاح")
-//        }
+        stateController.startAud()
+
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("sectionId",sectionId)
+            .addFormDataPart("storeCategoryId",storeCategory.id.toString())
+            .build()
+
+        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addStoreSection",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            val result: StoreSection =  MyJson.IgnoreUnknownKeys.decodeFromString(
+                it
+            )
+
+            storeSections.value += result
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
+            SingletonHome.home.value!!.storeSections += result
+            isShowAddSection.value = false
+            stateController.successStateAUD("تمت الاضافه  بنجاح")
+        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun modalAddMyCategory() {
-        var section by remember { mutableStateOf<Section?>(null) }
+        if (sections.value.isEmpty()) {
+            readSections()
+        }
         ModalBottomSheet(
             onDismissRequest = { isShowAddSection.value = false }) {
             Box(
@@ -319,47 +345,131 @@ private fun add(sectionId: String) {
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center
                 ) {
-
                     item {
-                        var expanded by remember { mutableStateOf(false) }
-                        Card(Modifier.padding(8.dp)) {
-                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
-                                if (sections.value.isEmpty()){
-                                    readSections()
+                        var sectionName by remember { mutableStateOf("") }
+                        Card(Modifier.padding(8.dp)){
+                            Row (Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ){
+                                OutlinedTextField(
+                                    modifier = Modifier.padding(8.dp),
+                                    value = sectionName,
+                                    onValueChange = {
+                                        sectionName = it
+                                    }
+                                )
+                                IconButton(onClick = {
+                                    addSection(sectionName,{
+                                        sectionName = ""
+                                        sections.value += it
+                                    })
+
+                                }) {
+                                    Icon(
+                                        modifier =
+                                        Modifier
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            )
+                                            .clip(
+                                                RoundedCornerShape(
+                                                    16.dp
+                                                )
+                                            ),
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = ""
+                                    )
                                 }
-                                expanded = !expanded
-                            },
+                            }
+                        }
+                    }
+
+                    itemsIndexed(sections.value){index,section->
+                        Card(Modifier.padding(8.dp)) {
+                            Row (
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                Text(section?.name ?: "اختر قسم")
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                            }
-                            if (expanded)
-                                sections.value.filterNot { sectionItem ->
-                                    storeSections.value.any { storeCategory ->
-                                        storeCategory.sectionId == sectionItem.id // Compare by the 'name' field
-                                    }
-                                }.forEach { item ->
-                                    DropdownMenuItem(onClick = {
-                                        section = item
-                                        expanded = false // Close the dropdown after selection
-                                    }, text = {
-                                        Text(item.name)
-                                    })
-                                }
+                                Text(section.name)
+                                Button(
+                                    enabled = !SingletonHome.home.value!!.storeSections.any { it.sectionId == section.id } && section.acceptedStatus != 0,
+                                    onClick = {
+                                        add(section.id.toString())
+                                    }) { Text(if (section.acceptedStatus == 0) "بانتظار الموافقة" else if (!SingletonHome.home.value!!.storeSections.any { it.sectionId == section.id }) "اضافة" else "تمت الاضافة") }
 
-                        }
-                        if (section != null )
-                            Button(onClick = {
-                                add(section!!.id.toString())
-                            },
-                                Modifier.fillMaxWidth()) {
-                                Text("حفظ")
                             }
+                        }
                     }
+
+//                    item {
+//                        var expanded by remember { mutableStateOf(false) }
+//                        Card(Modifier.padding(8.dp)) {
+//                            Row (Modifier.fillMaxWidth().padding(8.dp).clickable {
+//                                if (sections.value.isEmpty()){
+//                                    readSections()
+//                                }
+//                                expanded = !expanded
+//                            },
+//                                verticalAlignment = Alignment.CenterVertically,
+//                                horizontalArrangement = Arrangement.SpaceBetween
+//                            ){
+//                                Text(section?.name ?: "اختر قسم")
+//                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+//                            }
+//                            if (expanded)
+//                                sections.value.filterNot { sectionItem ->
+//                                    storeSections.value.any { storeCategory ->
+//                                        storeCategory.sectionId == sectionItem.id // Compare by the 'name' field
+//                                    }
+//                                }.forEach { item ->
+//                                    DropdownMenuItem(onClick = {
+//                                        section = item
+//                                        expanded = false // Close the dropdown after selection
+//                                    }, text = {
+//                                        Text(item.name)
+//                                    })
+//                                }
+//
+//                        }
+//                        if (section != null )
+//                            Button(onClick = {
+//                                add(section!!.id.toString())
+//                            },
+//                                Modifier.fillMaxWidth()) {
+//                                Text("حفظ")
+//                            }
+//                    }
+//
+//
                 }
             }
+        }
+    }
+
+    fun addSection(name:String, onSuccess: (data: Section) -> Unit) {
+        stateController.startAud()
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("name",name)
+            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .addFormDataPart("categoryId", storeCategory.id.toString())
+            .build()
+
+        requestServer.request2(body, "addSection", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result: Section = MyJson.IgnoreUnknownKeys.decodeFromString(data)
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),SingletonStoreConfig.storeId)
+            onSuccess(result)
+            stateController.successStateAUD()
         }
     }
 }
