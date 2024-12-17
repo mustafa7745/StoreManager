@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +50,8 @@ import com.fekraplatform.storemanger.models.Home
 import com.fekraplatform.storemanger.models.Store
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.StoreConfig
+import com.fekraplatform.storemanger.shared.CustomImageView
+import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -65,6 +69,9 @@ object SingletonStoreConfig{
     lateinit var storeId: String
     lateinit var typeId:String
     lateinit var storeIdReference:String
+
+    lateinit var logo:String
+    lateinit var cover:String
 
     fun isSharedStore():Boolean{
         return typeId == "1"
@@ -139,7 +146,7 @@ object SingletonHome {
             Log.e("frf23", home.value.toString())
             val diff =
                 Duration.between(homeStorage.getDate(storeId), getCurrentDate()).toMinutes()
-            if (diff <= 5) {
+            if (diff <= 1) {
                 stateController.successState()
                 Log.e("frf", homeStorage.getHome(storeId).toString())
                 home.value = homeStorage.getHome(storeId)
@@ -150,7 +157,6 @@ object SingletonHome {
         }
         Log.e("frf2344", home.value.toString())
         read(storeId)
-//        return false
     }
     fun read(storeId: String) {
         stateController.startRead()
@@ -169,6 +175,7 @@ object SingletonHome {
                     data
                 )
             home.value = result
+            homeStorage.setHome(data,storeId)
             Log.e("dsd", home.value.toString())
             Log.e("dsd2",result.toString())
             stateController.successState()
@@ -216,6 +223,7 @@ class StoreCategoriesActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
     val isShowAddCatgory = mutableStateOf(false)
 
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SingletonHome.setStateController1(stateController)
@@ -230,12 +238,15 @@ class StoreCategoriesActivity : ComponentActivity() {
 
                 SingletonStoreConfig.typeId = store.typeId.toString()
                 SingletonStoreConfig.storeId = store.id.toString()
+                SingletonStoreConfig.logo = store.logo
+                SingletonStoreConfig.cover = store.cover
                 if (store.storeConfig != null){
                     SingletonStoreConfig.storeIdReference = store.storeConfig!!.storeIdReference.toString()
                     SingletonStoreConfig.categories.value = store.storeConfig!!.categories
                     SingletonStoreConfig.sections.value = store.storeConfig!!.sections
                     SingletonStoreConfig.nestedSection.value = store.storeConfig!!.nestedSections
                     SingletonStoreConfig.products.value = store.storeConfig!!.products
+
                 }
 
 
@@ -278,7 +289,26 @@ class StoreCategoriesActivity : ComponentActivity() {
                         0.dp, SingletonHome.stateController, this,
                         { SingletonHome.read(if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId) },
                     ) {
+
                         LazyColumn {
+                            stickyHeader {
+                                Card(Modifier.fillMaxWidth().height(100.dp).clickable {
+
+                                }) {
+                                    CustomImageView(
+                                        modifier = Modifier.fillMaxWidth()
+                                            .height(80.dp)
+                                            .padding(8.dp)
+                                            .clickable {
+
+                                            },
+                                        context = this@StoreCategoriesActivity,
+                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_COVERS+SingletonStoreConfig.cover,
+                                        okHttpClient = requestServer.createOkHttpClientWithCustomCert()
+                                    )
+                                }
+                            }
+
 //                            if ()
                             item {
                                 SingletonStoreConfig.EditModeCompose()

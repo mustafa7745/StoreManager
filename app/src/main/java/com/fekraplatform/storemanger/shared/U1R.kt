@@ -17,6 +17,8 @@ class VarRemoteConfig(
     var BASE_URL:String,
     var BASE_IMAGE_URL:String,
     var SUB_FOLDER_PRODUCT:String,
-    var TYPE :String ,
-    val VERSION:String = "v1" ,
+    var SUB_FOLDER_STORE_COVERS:String,
+    var SUB_FOLDER_STORE_LOGOS:String,
+    var TYPE :String,
+    val VERSION:String = "v1",
 )

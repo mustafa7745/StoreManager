@@ -52,7 +52,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.Option
 import com.fekraplatform.storemanger.models.Product
@@ -71,7 +70,6 @@ import com.fekraplatform.storemanger.shared.builderForm3
 import com.fekraplatform.storemanger.storage.ProductsStorageDBManager
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -118,6 +116,8 @@ class ProductsActivity : ComponentActivity() {
     val isShowAddCatgory = mutableStateOf(false)
     val isShowChooseOptionAndPrice = mutableStateOf(false)
 
+    lateinit var storeId:String
+
 
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,16 +135,16 @@ class ProductsActivity : ComponentActivity() {
             finish()
         }
 
-        val stId=  if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId
+        storeId=  if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId
 
-        if (productsStorageDBManager.isSet(stId,storeNestedSection.id.toString())){
+        if (productsStorageDBManager.isSet(storeId,storeNestedSection.id.toString())){
             val diff =
-                Duration.between(productsStorageDBManager.getDate(stId,storeNestedSection.id.toString()), getCurrentDate()).toMinutes()
+                Duration.between(productsStorageDBManager.getDate(storeId,storeNestedSection.id.toString()), getCurrentDate()).toMinutes()
             if (diff <= 1){
 
 //                val storeProduct : List<StoreProduct>
 
-                val res = productsStorageDBManager.getStoreProducts(stId,storeNestedSection.id.toString())
+                val res = productsStorageDBManager.getStoreProducts(storeId,storeNestedSection.id.toString())
                 res.forEach {
                     Log.e("res",it.options.joinToString(","){it.storeProductId.toString() })
                 }
@@ -153,10 +153,10 @@ class ProductsActivity : ComponentActivity() {
                 stateController.successState()
 //
             }else{
-                read(stId)
+                read()
             }
         }else{
-            read(stId)
+            read()
         }
 
 
@@ -166,7 +166,7 @@ class ProductsActivity : ComponentActivity() {
             StoreMangerTheme{
                 MainCompose1(
                     0.dp, stateController ,this,
-                    { read(stId) },
+                    { read() },
                 ){
 
                     LazyColumn(Modifier.fillMaxSize()) {
@@ -255,7 +255,7 @@ class ProductsActivity : ComponentActivity() {
                                         }
                                     }
                                     if (!isExpanded){
-                                        var optionIds by remember { mutableStateOf<List<Int>>(emptyList()) }
+                                        var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
                                         Text(storeProduct.productDescription.toString(),Modifier.clickable {  }, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                         Row (Modifier.fillMaxWidth()
                                             , verticalAlignment = Alignment.CenterVertically
@@ -286,34 +286,11 @@ class ProductsActivity : ComponentActivity() {
                                                     contentDescription = ""
                                                 )
                                             }
-                                            if (optionIds.isNotEmpty()){
-                                                IconButton(onClick = {
-                                                    if (!SingletonStoreConfig.isSharedStore())
-                                                    deleteProductOptions(optionIds,{
-                                                        optionIds = emptyList()
+                                            IconDelete(ids){
+                                                if (!SingletonStoreConfig.isSharedStore())
+                                                    deleteProductOptions(ids, {
+                                                        ids = emptyList()
                                                     })
-//                                                    selectedProduct = product
-//                                                    isShowAddProductOption.value = true
-                                                }) {
-                                                    Icon(
-                                                        modifier =
-                                                        Modifier
-                                                            .border(
-                                                                1.dp,
-                                                                MaterialTheme.colorScheme.primary,
-                                                                RoundedCornerShape(
-                                                                    16.dp
-                                                                )
-                                                            )
-                                                            .clip(
-                                                                RoundedCornerShape(
-                                                                    16.dp
-                                                                )
-                                                            ),
-                                                        imageVector = Icons.Outlined.Delete,
-                                                        contentDescription = ""
-                                                    )
-                                                }
                                             }
                                         }
 
@@ -365,12 +342,12 @@ class ProductsActivity : ComponentActivity() {
                                                         isShowUpdateText.value = true
                                                     }
                                                 })
-                                                Checkbox(checked = optionIds.find { it == productOption.storeProductId } != null, onCheckedChange = {
-                                                    val itemC = optionIds.find { it == productOption.storeProductId }
+                                                Checkbox(checked = ids.find { it == productOption.storeProductId } != null, onCheckedChange = {
+                                                    val itemC = ids.find { it == productOption.storeProductId }
                                                     if (itemC == null) {
-                                                        optionIds = optionIds + productOption.storeProductId
+                                                        ids = ids + productOption.storeProductId
                                                     }else{
-                                                        optionIds = optionIds - productOption.storeProductId
+                                                        ids = ids - productOption.storeProductId
                                                     }
                                                 })
                                             }
@@ -455,7 +432,7 @@ class ProductsActivity : ComponentActivity() {
                                                 Modifier.height(120.dp)
                                             ) {
                                                 itemsIndexed(storeProduct.images){ index: Int, item: ProductImage ->
-                                                    Log.e("urlfff",U1R.BASE_IMAGE_URL+item.image)
+                                                    Log.e("urlfff",requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_PRODUCT+item.image)
                                                     Box (Modifier.size(100.dp)){
                                                         CustomImageView(
                                                             modifier = Modifier
@@ -469,7 +446,7 @@ class ProductsActivity : ComponentActivity() {
 //                                        uploadImage(inputStream,item.id)
                                                                 },
                                                             context = this@ProductsActivity,
-                                                            imageUrl = U1R.BASE_IMAGE_URL+U1R.SUB_FOLDER_PRODUCT+item.image,
+                                                            imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_PRODUCT+item.image,
                                                             okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                                                         )
                                                         IconButton(onClick = {
@@ -562,7 +539,7 @@ class ProductsActivity : ComponentActivity() {
             }
         }
     }
-    fun read(storeId:String){
+    fun read(){
         stateController.startRead()
 
         Log.e("sec",storeNestedSection.toString())
@@ -571,7 +548,10 @@ class ProductsActivity : ComponentActivity() {
             .addFormDataPart("storeId",storeId)
             .build()
 
-        requestServer.request2(body,"readMain",{code,fail->
+        Log.e("ff",storeNestedSection.id.toString())
+        Log.e("ff2",storeId.toString())
+
+        requestServer.request2(body,"getMain",{code,fail->
             stateController.errorStateRead(fail)
         }
         ){data->
@@ -1109,7 +1089,6 @@ class ProductsActivity : ComponentActivity() {
                         if (uri.value != null){
                             CustomImageViewUri(
                                 modifier = Modifier.fillMaxWidth(),
-                                context = this@ProductsActivity,
                                 imageUrl = uri.value!!,
                             )
 //                        if (inputStream != null){
@@ -1159,7 +1138,6 @@ class ProductsActivity : ComponentActivity() {
                         if (uri.value != null){
                             CustomImageViewUri(
                                 modifier = Modifier.fillMaxWidth(),
-                                context = this@ProductsActivity,
                                 imageUrl = uri.value!!,
                             )
 //                        if (inputStream != null){
@@ -1524,6 +1502,7 @@ class ProductsActivity : ComponentActivity() {
             .addFormDataPart("optionId", optionId.toString())
             .addFormDataPart("storeNestedSectionId", storeNestedSection.id.toString())
             .addFormDataPart("price",price.toString())
+            .addFormDataPart("storeId",storeId)
             .addFormDataPart("getWithProduct",if (getWithProduct)"1" else "0")
             .build()
 
@@ -1541,6 +1520,7 @@ class ProductsActivity : ComponentActivity() {
                     it
                 )
                 storeProducts.value += result
+                productsStorageDBManager.addStoreProduct(result,storeId,storeNestedSection.id)
             }
             else{
                 val result:ProductOption =  MyJson.IgnoreUnknownKeys.decodeFromString(
@@ -1553,6 +1533,10 @@ class ProductsActivity : ComponentActivity() {
                     if (productId == product.productId) {
                         // Only add the result if the productId matches
                         updatedOptions.add(result)  // Add the new image (result) to the options
+                        productsStorageDBManager.addProductOption2(
+                            result.storeProductId.toString(),
+                            result.optionId.toString(),storeNestedSection.id,product.productId,result.name,result.price)
+
                     }
 
                     // Return a new product with the updated options (images)
@@ -1705,7 +1689,7 @@ class ProductsActivity : ComponentActivity() {
             .addFormDataPart("d","e")
             .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/readOptions",{code,fail->
+        requestServer.request2(body,"getOptions",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
@@ -1715,24 +1699,7 @@ class ProductsActivity : ComponentActivity() {
             stateController.successStateAUD()
         }
     }
-    fun readStoreCategories() {
-        stateController.startAud()
-        //
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("d","e")
-            .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/readStoreCategories",{code,fail->
-            stateController.errorStateAUD(fail)
-        }
-        ){it->
-            storeCategories.value =  MyJson.IgnoreUnknownKeys.decodeFromString(
-                it
-            )
-            stateController.successStateAUD()
-        }
-    }
     fun deleteProductOptions(ids:List<Int>,onDone:()->Unit) {
         stateController.startAud()
         //
@@ -1761,13 +1728,29 @@ class ProductsActivity : ComponentActivity() {
             stateController.successStateAUD()
         }
     }
+    fun deleteProducts(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteProducts",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
+            stateController.successStateAUD()
+        }
+    }
 
     fun readProducts() {
         stateController.startAud()
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("nestedSectionId", storeNestedSection.nestedSectionId.toString())
-            .addFormDataPart("storeId", "1")
+            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
             .build()
 
         requestServer.request2(body, "getProducts", { code, fail ->
@@ -1788,6 +1771,7 @@ class ProductsActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun modalAddNewProduct() {
+        var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
         if (products.value.isEmpty()) {
             readProducts()
         }
@@ -1859,6 +1843,19 @@ class ProductsActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                            IconDelete(ids){
+                                if (!SingletonStoreConfig.isSharedStore())
+                                deleteProducts(ids, {
+
+                                    Log.e("products",products.value.toString())
+                                    Log.e("Preproducts",products.value.size.toString())
+                                    products.value = products.value.filterNot { it.id in ids }
+                                    isShowAddCatgory.value = false
+                                    Log.e("products",products.value.toString())
+                                    Log.e("Preproducts",products.value.size.toString())
+                                    ids = emptyList()
+                                })
+                            }
                         }
                     }
 
@@ -1871,6 +1868,14 @@ class ProductsActivity : ComponentActivity() {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
+                                Checkbox(checked = ids.find { it == product.id } != null, onCheckedChange = {
+                                    val itemC = ids.find { it == product.id}
+                                    if (itemC == null) {
+                                        ids = ids + product.id
+                                    }else{
+                                        ids = ids - product.id
+                                    }
+                                })
                                 Text(product.name)
                                 Button(
                                     enabled = !storeProducts.value.any { it.productId == product.id } && product.acceptedStatus != 0,
@@ -1885,6 +1890,33 @@ class ProductsActivity : ComponentActivity() {
                     }
 
                 }
+            }
+        }
+    }
+
+    @Composable
+    private fun IconDelete(ids: List<Int> , onClick: () -> Unit) {
+
+        if (ids.isNotEmpty()) {
+            IconButton(onClick = onClick) {
+                Icon(
+                    modifier =
+                    Modifier
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(
+                                16.dp
+                            )
+                        )
+                        .clip(
+                            RoundedCornerShape(
+                                16.dp
+                            )
+                        ),
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = ""
+                )
             }
         }
     }

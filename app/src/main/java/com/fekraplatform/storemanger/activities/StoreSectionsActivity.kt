@@ -81,7 +81,9 @@ class StoreSectionsActivity : ComponentActivity() {
 
                     MainCompose1 (
                         0.dp, stateController, this,
-                        { read() },
+                        {
+
+                        },
                     ) {
                         LazyColumn {
 
@@ -260,34 +262,14 @@ private fun goToSections(storeSection: StoreSection) {
     intent.putExtra("storeSection", MyJson.MyJson.encodeToString(storeSection))
     startActivity(intent)
 }
-fun read() {
-    stateController.startRead()
 
-    val body = MultipartBody.Builder()
-        .setType(MultipartBody.FORM)
-        .addFormDataPart("storeId", "1")
-        .addFormDataPart("storeCategory1Id", storeCategory.id.toString())
-        .build()
-
-    requestServer.request2(body, "getStoreSections", { code, fail ->
-        stateController.errorStateRead(fail)
-    }
-    ) { data ->
-        storeSections.value =
-            MyJson.IgnoreUnknownKeys.decodeFromString(
-                data
-            )
-
-        stateController.successState()
-    }
-}
 fun readSections() {
         stateController.startAud()
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("categoryId", storeCategory.categoryId.toString())
-            .addFormDataPart("storeId", "1")
+            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
             .build()
 
         requestServer.request2(body, "getSections", { code, fail ->
@@ -459,7 +441,7 @@ private fun add(sectionId: String) {
             .setType(MultipartBody.FORM)
             .addFormDataPart("name",name)
             .addFormDataPart("storeId", SingletonStoreConfig.storeId)
-            .addFormDataPart("categoryId", storeCategory.id.toString())
+            .addFormDataPart("categoryId", storeCategory.categoryId.toString())
             .build()
 
         requestServer.request2(body, "addSection", { code, fail ->

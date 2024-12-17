@@ -7,6 +7,8 @@ data class Store(
     val id: Int,
     val typeId: Int,
     val name: String,
+    val logo : String,
+    val cover : String,
     var storeConfig:StoreConfig?
 )
 

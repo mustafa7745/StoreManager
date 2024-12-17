@@ -2,6 +2,7 @@ package com.fekraplatform.storemanger.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -81,7 +82,7 @@ class StoreNestedSectionsActivity : ComponentActivity() {
 
                     MainCompose1 (
                         0.dp, stateController, this,
-                        { read() },
+                        {  },
                     ) {
                         LazyColumn {
                             item {
@@ -245,27 +246,7 @@ class StoreNestedSectionsActivity : ComponentActivity() {
         intent.putExtra("storeNestedSection", MyJson.MyJson.encodeToString(storeNestedSection))
         startActivity(intent)
     }
-fun read() {
-    stateController.startRead()
 
-    val body = MultipartBody.Builder()
-        .setType(MultipartBody.FORM)
-        .addFormDataPart("storeId", "1")
-        .addFormDataPart("sectionsStoreCategoryId", storeSection.id.toString())
-        .build()
-
-    requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getCsPsSCR", { code, fail ->
-        stateController.errorStateRead(fail)
-    }
-    ) { data ->
-        storeNestedSections.value =
-            MyJson.IgnoreUnknownKeys.decodeFromString(
-                data
-            )
-
-        stateController.successState()
-    }
-}
 private fun add(nestedSectionId: String) {
 
         stateController.startAud()
@@ -275,6 +256,8 @@ private fun add(nestedSectionId: String) {
             .addFormDataPart("nestedSectionId",nestedSectionId)
             .addFormDataPart("storeSectionId",storeSection.id.toString())
             .build()
+
+
 
         requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addStoreNestedSection",{code,fail->
             stateController.errorStateAUD(fail)
@@ -422,8 +405,11 @@ private fun add(nestedSectionId: String) {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("sectionId", storeSection.sectionId.toString())
-            .addFormDataPart("storeId", "1")
+            .addFormDataPart("storeId",  SingletonStoreConfig.storeId)
             .build()
+        Log.e("fr1",storeSection.sectionId.toString())
+        Log.e("fr2",SingletonStoreConfig.storeId)
+
 
         requestServer.request2(body, "getNestedSections", { code, fail ->
             stateController.errorStateAUD(fail)
@@ -443,7 +429,7 @@ private fun add(nestedSectionId: String) {
             .setType(MultipartBody.FORM)
             .addFormDataPart("name",name)
             .addFormDataPart("storeId", SingletonStoreConfig.storeId)
-            .addFormDataPart("sectionId", storeSection.id.toString())
+            .addFormDataPart("sectionId", storeSection.sectionId.toString())
             .build()
 
         requestServer.request2(body, "addNestedSection", { code, fail ->

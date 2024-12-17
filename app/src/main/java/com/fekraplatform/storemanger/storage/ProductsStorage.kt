@@ -15,7 +15,7 @@ import com.fekraplatform.storemanger.models.StoreProduct
 import java.time.LocalDateTime
 
 const val DATABASE_PRODUCT_NAME = "products.db"
-const val DATABASE_PRODUCT_VERSION = 11
+const val DATABASE_PRODUCT_VERSION = 14
 class StoreProductStructure{
     companion object {
 
@@ -341,6 +341,52 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
             db.close()
         }
     }
+
+    fun addStoreProduct(storeProduct:StoreProduct,storeId: String,storeNestedSectionId: Int) {
+        val db = this.writableDatabase
+
+        db.beginTransaction()
+        try {
+
+                addProductStore(db,storeProduct.productId.toString(),
+                    storeId,storeNestedSectionId,storeProduct.productName,storeProduct.productDescription.toString())
+                storeProduct.options.forEach { option ->
+                    addProductOption(db,option.storeProductId.toString(),option.optionId.toString(),storeNestedSectionId,storeProduct.productId.toString(),option.name.toString(),option.price)
+                }
+
+                storeProduct.images.forEach { image ->
+                    addImage(db,image.id.toString(),storeProduct.productId.toString(),image.image.toString())
+                }
+            db.setTransactionSuccessful()
+        } catch (e: Exception) {
+            // Handle any exceptions if necessary (optional)
+            e.printStackTrace()
+        } finally {
+            // End the transaction (commit or rollback depending on success)
+            db.endTransaction()
+            db.close()
+        }
+    }
+
+    fun addProductOption2(storeProductId:String,optionId: String,nestedSectionId: Int,productId: Int,optionName:String,optionPrice: String) {
+        val db = this.writableDatabase
+
+        db.beginTransaction()
+        try {
+            addProductOption(db,storeProductId,optionId,nestedSectionId,productId.toString(),optionName,optionPrice)
+            db.setTransactionSuccessful()
+            Log.e("fob","done")
+
+        } catch (e: Exception) {
+            // Handle any exceptions if necessary (optional)
+            e.printStackTrace()
+        } finally {
+            // End the transaction (commit or rollback depending on success)
+            db.endTransaction()
+            db.close()
+        }
+    }
+
 
 
     fun getProduct(id: Long): Cursor? {

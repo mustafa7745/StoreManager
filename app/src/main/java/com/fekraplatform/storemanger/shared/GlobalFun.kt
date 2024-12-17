@@ -3,26 +3,14 @@ package com.fekraplatform.storemanger.shared
 
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -184,7 +172,6 @@ fun CustomImageView(
 }
 @Composable
 fun CustomImageViewUri(
-    context: Context,
     imageUrl: Uri,
     modifier: Modifier = Modifier,
     contentDescription: String? = null
@@ -240,10 +227,14 @@ fun initVarConfig(serverConfig: ServerConfig,onFail:()->Unit,onSuccess: () -> Un
                 val BASE_IMAGE_URL = remoteConfig.getString("BASE_IMAGE_URL")
                 val SUB_FOLDER_PRODUCT = remoteConfig.getString("SUB_FOLDER_PRODUCT")
                 val TYPE = remoteConfig.getString("TYPE_STORE_MANAGER")
+                val SUB_FOLDER_STORE_LOGOS = remoteConfig.getString("SUB_FOLDER_STORE_LOGOS")
+                    val SUB_FOLDER_STORE_COVERS = remoteConfig.getString("SUB_FOLDER_STORE_COVERS")
                 val varRemoteConfig = VarRemoteConfig(
                     BASE_URL = BASE_URL,
                     BASE_IMAGE_URL = BASE_IMAGE_URL,
-                    SUB_FOLDER_PRODUCT = SUB_FOLDER_PRODUCT, TYPE = TYPE
+                    SUB_FOLDER_PRODUCT = SUB_FOLDER_PRODUCT, TYPE = TYPE,
+                    SUB_FOLDER_STORE_LOGOS = SUB_FOLDER_STORE_LOGOS,
+                    SUB_FOLDER_STORE_COVERS = SUB_FOLDER_STORE_COVERS
                 )
                 serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(varRemoteConfig))
                 onSuccess()
