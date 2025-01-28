@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +44,8 @@ import com.fekraplatform.storemanger.models.Category
 import com.fekraplatform.storemanger.models.Section
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.StoreSection
+import com.fekraplatform.storemanger.shared.CustomSingleton
+import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -85,7 +89,20 @@ class StoreSectionsActivity : ComponentActivity() {
 
                         },
                     ) {
-                        LazyColumn {
+                        var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
+                        IconDelete(ids) {
+                            if (!SingletonStoreConfig.isSharedStore())
+                                deleteStoreSections(ids){
+                                    ids = emptyList()
+//                                    isShowAddSection.value = false
+//                                    nestedSections.value.forEach {
+//                                        if (it.id in ids){
+//                                            nestedSections.value -= it
+//                                        }
+//                                    }
+                                }
+                        }
+                        LazyColumn(Modifier.safeDrawingPadding()) {
 
                             item {
                                 SingletonStoreConfig.EditModeCompose()
@@ -100,11 +117,11 @@ class StoreSectionsActivity : ComponentActivity() {
                             val sectionList = SingletonHome.home.value!!.storeSections
                                 .filter { it.storeCategoryId == storeCategory.id }
                                 .let { storeSectionList ->
-                                    if (SingletonStoreConfig.isSharedStore()) {
+                                    if (CustomSingleton.isSharedStore()) {
                                         if (SingletonHome.isEditMode.value) {
                                             storeSectionList
                                         } else {
-                                            storeSectionList.filterNot { it.id in SingletonStoreConfig.sections.value }
+                                            storeSectionList.filterNot { it.id in CustomSingleton.selectedStore!!.storeConfig!!.sections }
                                         }
                                     } else {
                                         storeSectionList
@@ -126,9 +143,20 @@ class StoreSectionsActivity : ComponentActivity() {
                                                 if (! SingletonHome.sections.value.any { it == section.id })    goToSections(section)
                                             }
                                     ){
+                                        if (!CustomSingleton.isSharedStore())
+                                        Checkbox(
+                                        modifier = Modifier.align(Alignment.CenterStart),
+                                        checked = ids.find { it == section.id } != null, onCheckedChange = {
+                                        val itemC = ids.find { it == section.id}
+                                        if (itemC == null) {
+                                            ids = ids + section.id
+                                        }else{
+                                            ids = ids - section.id
+                                        }
+                                    })
                                         Text(section.sectionName,Modifier.align(Alignment.Center))
                                         if (SingletonHome.isEditMode.value){
-                                            if (SingletonStoreConfig.sections.value.any { number -> number == section.id }){
+                                            if (CustomSingleton.selectedStore!!.storeConfig!!.sections.any { number -> number == section.id }){
                                                 if (! SingletonHome.sections.value.any { it == section.id }) {
                                                     Text(
                                                         "تمت الاضافة بانتظار التأكيد",
@@ -174,6 +202,7 @@ class StoreSectionsActivity : ComponentActivity() {
                                 }
                             }
 
+                            if (!CustomSingleton.isSharedStore())
                             item {
                                 Card(
                                     Modifier
@@ -269,7 +298,7 @@ fun readSections() {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("categoryId", storeCategory.categoryId.toString())
-            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .addFormDataPart("storeId", CustomSingleton.getCustomStoreId().toString())
             .build()
 
         requestServer.request2(body, "getSections", { code, fail ->
@@ -303,7 +332,7 @@ private fun add(sectionId: String) {
             )
 
             storeSections.value += result
-            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),CustomSingleton.getCustomStoreId().toString())
             SingletonHome.home.value!!.storeSections += result
             isShowAddSection.value = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")
@@ -323,6 +352,8 @@ private fun add(sectionId: String) {
                     .fillMaxSize()
                     .padding(bottom = 10.dp)
             ){
+                var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
+
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center
@@ -367,6 +398,17 @@ private fun add(sectionId: String) {
                                     )
                                 }
                             }
+                            IconDelete(ids) {
+                                if (!CustomSingleton.isSharedStore())
+                                    deleteSections(ids){
+                                        isShowAddSection.value = false
+                                        sections.value.forEach {
+                                            if (it.id in ids){
+                                                sections.value -= it
+                                            }
+                                        }
+                                    }
+                            }
                         }
                     }
 
@@ -386,6 +428,14 @@ private fun add(sectionId: String) {
                                         add(section.id.toString())
                                     }) { Text(if (section.acceptedStatus == 0) "بانتظار الموافقة" else if (!SingletonHome.home.value!!.storeSections.any { it.sectionId == section.id }) "اضافة" else "تمت الاضافة") }
 
+                                Checkbox(checked = ids.find { it == section.id } != null, onCheckedChange = {
+                                    val itemC = ids.find { it == section.id}
+                                    if (itemC == null) {
+                                        ids = ids + section.id
+                                    }else{
+                                        ids = ids - section.id
+                                    }
+                                })
                             }
                         }
                     }
@@ -440,7 +490,7 @@ private fun add(sectionId: String) {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("name",name)
-            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .addFormDataPart("storeId", CustomSingleton.getCustomStoreId().toString())
             .addFormDataPart("categoryId", storeCategory.categoryId.toString())
             .build()
 
@@ -449,8 +499,40 @@ private fun add(sectionId: String) {
         }
         ) { data ->
             val result: Section = MyJson.IgnoreUnknownKeys.decodeFromString(data)
-            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),SingletonStoreConfig.storeId)
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),CustomSingleton.getCustomStoreId().toString())
             onSuccess(result)
+            stateController.successStateAUD()
+        }
+    }
+    fun deleteSections(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteSections",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
+            stateController.successStateAUD()
+        }
+    }
+    fun deleteStoreSections(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteStoreSections",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
             stateController.successStateAUD()
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.models.Category
 import com.fekraplatform.storemanger.models.Home
@@ -52,6 +54,8 @@ import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.StoreConfig
 import com.fekraplatform.storemanger.shared.CustomImageView
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
+import com.fekraplatform.storemanger.shared.CustomSingleton
+import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -66,54 +70,49 @@ import java.time.LocalDateTime
 
 
 object SingletonStoreConfig{
+
     lateinit var storeId: String
     lateinit var typeId:String
-    lateinit var storeIdReference:String
 
-    lateinit var logo:String
-    lateinit var cover:String
 
     fun isSharedStore():Boolean{
         return typeId == "1"
     }
-    val categories   =  mutableStateOf<List<Int>>(emptyList())
-    val sections   =  mutableStateOf<List<Int>>(emptyList())
-    val nestedSection   =  mutableStateOf<List<Int>>(emptyList())
-    val products   =  mutableStateOf<List<Int>>(emptyList())
+
 
     @Composable
     fun EditModeCompose() {
-        if (typeId =="1")
-        Card(
-            Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-        ) {
-            Row(Modifier.fillMaxWidth()) {
-                Switch(
-                    checked = SingletonHome.isEditMode.value,
-                    onCheckedChange = { SingletonHome.isEditMode.value = it },
-                    modifier = Modifier.padding(16.dp)
-                )
-                Text("وضع التعديل")
-
-            }
-            if ((SingletonHome.categories.value != categories.value ||
-                        SingletonHome.sections.value != sections.value ||
-                        SingletonHome.nestedSection.value != nestedSection.value ||
-                        SingletonHome.products.value != products.value )
-
-                && SingletonHome.isEditMode.value){
-                if (SingletonHome.stateController.isLoadingAUD.value)
-                    CircularProgressIndicator()
-                else
-                    Text("حفظ التعديلات", Modifier.clickable {
-                        SingletonHome.updateStoreConfig()
-                        Log.e("wwww", SingletonHome.categories.value.toString())
-                    })
-            }
-
-        }
+//        if (typeId =="1")
+//        Card(
+//            Modifier
+//                .fillMaxWidth()
+//                .padding(8.dp)
+//        ) {
+//            Row(Modifier.fillMaxWidth()) {
+//                Switch(
+//                    checked = SingletonHome.isEditMode.value,
+//                    onCheckedChange = { SingletonHome.isEditMode.value = it },
+//                    modifier = Modifier.padding(16.dp)
+//                )
+//                Text("وضع التعديل")
+//
+//            }
+//            if ((SingletonHome.categories.value != categories.value ||
+//                        SingletonHome.sections.value != sections.value ||
+//                        SingletonHome.nestedSection.value != nestedSection.value ||
+//                        SingletonHome.products.value != products.value )
+//
+//                && SingletonHome.isEditMode.value){
+//                if (SingletonHome.stateController.isLoadingAUD.value)
+//                    CircularProgressIndicator()
+//                else
+//                    Text("حفظ التعديلات", Modifier.clickable {
+//                        SingletonHome.updateStoreConfig()
+//                        Log.e("wwww", SingletonHome.categories.value.toString())
+//                    })
+//            }
+//
+//        }
     }
 }
 object SingletonHome {
@@ -123,12 +122,8 @@ object SingletonHome {
     val nestedSection   =  mutableStateOf<List<Int>>(emptyList())
     val products   =  mutableStateOf<List<Int>>(emptyList())
     val isEditMode = mutableStateOf(false)
-//    val storeConfig = mutableStateOf(StoreConfig(
-//        emptyList(), emptyList(),
-//        emptyList(), emptyList()
-//    ))
 
-//    val store = mutableStateOf<Store?>(null)
+
 
     lateinit var stateController: StateController
     lateinit var requestServer : RequestServer
@@ -187,12 +182,13 @@ object SingletonHome {
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId", SingletonStoreConfig.storeId.toString())
+            .addFormDataPart("storeId", CustomSingleton.selectedStore!!.id.toString())
             .addFormDataPart("products", products.value.toString())
             .addFormDataPart("nestedSections", nestedSection.value.toString())
             .addFormDataPart("sections", sections.value.toString())
             .addFormDataPart("categories", categories.value.toString())
             .build()
+        Log.e("pre", categories.value.toString())
 
         requestServer.request2(body, "updateStoreConfig", { code, fail ->
             stateController.errorStateAUD(fail)
@@ -202,12 +198,19 @@ object SingletonHome {
                 MyJson.IgnoreUnknownKeys.decodeFromString(
                     data
                 )
+            categories.value = result.categories
+            sections.value = result.sections
+            nestedSection.value = result.nestedSections
+            products.value = result.products
+            //
+            CustomSingleton.selectedStore = CustomSingleton.selectedStore!!.copy(storeConfig = result)
 
-            SingletonStoreConfig.categories.value = result.categories
-             SingletonStoreConfig.sections.value = result.sections
-             SingletonStoreConfig.nestedSection.value = result.nestedSections
-           SingletonStoreConfig.products.value = result.products
-
+            CustomSingleton.stores = CustomSingleton.stores.map {
+                if (CustomSingleton.selectedStore == it){
+                    it.copy(storeConfig = result)
+                }
+                else it
+            }
             stateController.successStateAUD("تم بنجاح")
         }
     }
@@ -223,6 +226,8 @@ class StoreCategoriesActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
     val isShowAddCatgory = mutableStateOf(false)
 
+
+
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -236,17 +241,19 @@ class StoreCategoriesActivity : ComponentActivity() {
 //                store =
                 val store:Store = MyJson.IgnoreUnknownKeys.decodeFromString(str)
 
-                SingletonStoreConfig.typeId = store.typeId.toString()
-                SingletonStoreConfig.storeId = store.id.toString()
-                SingletonStoreConfig.logo = store.logo
-                SingletonStoreConfig.cover = store.cover
+//                SingletonStoreConfig.typeId = store.typeId.toString()
+//                SingletonStoreConfig.storeId = store.id.toString()
+//                SingletonStoreConfig.logo = store.logo
+//                SingletonStoreConfig.cover = store.cover
                 if (store.storeConfig != null){
-                    SingletonStoreConfig.storeIdReference = store.storeConfig!!.storeIdReference.toString()
-                    SingletonStoreConfig.categories.value = store.storeConfig!!.categories
-                    SingletonStoreConfig.sections.value = store.storeConfig!!.sections
-                    SingletonStoreConfig.nestedSection.value = store.storeConfig!!.nestedSections
-                    SingletonStoreConfig.products.value = store.storeConfig!!.products
 
+//                    if (!SingletonStoreConfig.isSetValue){
+//                        SingletonStoreConfig.storeIdReference = store.storeConfig!!.storeIdReference.toString()
+//                        SingletonStoreConfig.categories.value = store.storeConfig!!.categories
+//                        SingletonStoreConfig.sections.value = store.storeConfig!!.sections
+//                        SingletonStoreConfig.nestedSection.value = store.storeConfig!!.nestedSections
+//                        SingletonStoreConfig.products.value = store.storeConfig!!.products
+//                    }
                 }
 
 
@@ -262,11 +269,13 @@ class StoreCategoriesActivity : ComponentActivity() {
 
 //        SingletonHome.stateController.successState()
 
-        if (SingletonStoreConfig.isSharedStore()){
-            SingletonHome.initHome(SingletonStoreConfig.storeIdReference)
-        }else{
-            SingletonHome.initHome(SingletonStoreConfig.storeId)
-        }
+        SingletonHome.initHome(CustomSingleton.getCustomStoreId().toString())
+
+//        if (CustomSingleton.isSharedStore()){
+//            SingletonHome.initHome(SingletonStoreConfig.storeIdReference)
+//        }else{
+//            SingletonHome.initHome(SingletonStoreConfig.storeId)
+//        }
 
 //        if (SingletonHome.isSetHome()){
 //            stateController.successState()
@@ -276,20 +285,41 @@ class StoreCategoriesActivity : ComponentActivity() {
 
 //        val categories= mutableStateOf<List<Int>>(emptyList())
 
+//        if (!SingletonStoreConfig.isSetValue){
+        if (CustomSingleton.isSharedStore()){
+            SingletonHome.categories.value = CustomSingleton.selectedStore!!.storeConfig!!.categories
+            SingletonHome.sections.value = CustomSingleton.selectedStore!!.storeConfig!!.sections
+            SingletonHome.nestedSection.value = CustomSingleton.selectedStore!!.storeConfig!!.nestedSections
+            SingletonHome.products.value = CustomSingleton.selectedStore!!.storeConfig!!.products
+        }
+
+//        }
+
         enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
 
-                SingletonHome.categories.value = SingletonStoreConfig.categories.value
-                SingletonHome.sections.value = SingletonStoreConfig.sections.value
-                SingletonHome.nestedSection.value = SingletonStoreConfig.nestedSection.value
-                SingletonHome.products.value = SingletonStoreConfig.products.value
+//                SingletonHome.categories.value = SingletonStoreConfig.categories.value
+//                SingletonHome.sections.value = SingletonStoreConfig.sections.value
+//                SingletonHome.nestedSection.value = SingletonStoreConfig.nestedSection.value
+//                SingletonHome.products.value = SingletonStoreConfig.products.value
 
                     MainCompose1 (
                         0.dp, SingletonHome.stateController, this,
-                        { SingletonHome.read(if (SingletonStoreConfig.isSharedStore()) SingletonStoreConfig.storeIdReference else SingletonStoreConfig.storeId) },
+                        { SingletonHome.read(if (CustomSingleton.isSharedStore()) CustomSingleton.selectedStore!!.storeConfig!!.storeIdReference.toString() else CustomSingleton.selectedStore!!.id.toString()) },
                     ) {
-
+                        var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
+                        IconDelete(ids) {
+                            if (!CustomSingleton.isSharedStore())
+                                deleteStoreCategories(ids){
+                                  ids = emptyList()
+//                                    nestedSections.value.forEach {
+//                                        if (it.id in ids){
+//                                            nestedSections.value -= it
+//                                        }
+//                                    }
+                                }
+                        }
                         LazyColumn {
                             stickyHeader {
                                 Card(Modifier.fillMaxWidth().height(100.dp).clickable {
@@ -303,7 +333,7 @@ class StoreCategoriesActivity : ComponentActivity() {
 
                                             },
                                         context = this@StoreCategoriesActivity,
-                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_COVERS+SingletonStoreConfig.cover,
+                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_COVERS+CustomSingleton.selectedStore!!.cover,
                                         okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                                     )
                                 }
@@ -331,8 +361,8 @@ class StoreCategoriesActivity : ComponentActivity() {
 //                            item {
 //                                LazyRow(Modifier.fillMaxWidth().height(100.dp).padding(8.dp)) {
 
-                            val cats = if (SingletonStoreConfig.isSharedStore()){
-                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeCategories else SingletonHome.home.value!!.storeCategories.filterNot { it.id in SingletonStoreConfig.categories.value }
+                            val cats = if (CustomSingleton.isSharedStore()){
+                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeCategories else SingletonHome.home.value!!.storeCategories.filterNot { it.id in CustomSingleton.selectedStore!!.storeConfig!!.categories }
                             }
                             else SingletonHome.home.value!!.storeCategories
                                     itemsIndexed(cats ){index, category ->
@@ -350,53 +380,117 @@ class StoreCategoriesActivity : ComponentActivity() {
                                                         if (! SingletonHome.categories.value.any { it == category.id }) goToSections(category)
                                                     }
                                             ){
+                                                if (SelectedStore.store.value!!.typeId != 1)
+                                                Checkbox(  modifier = Modifier.align(Alignment.CenterStart),checked = ids.find { it == category.id } != null, onCheckedChange = {
+                                                    val itemC = ids.find { it == category.id}
+                                                    if (itemC == null) {
+                                                        ids = ids + category.id
+                                                    }else{
+                                                        ids = ids - category.id
+                                                    }
+                                                })
+
                                                 Text(category.categoryName,Modifier.align(Alignment.Center))
-                                                if (SingletonHome.isEditMode.value){
-                                                    if (SingletonStoreConfig.categories.value.any { number -> number == category.id }){
-                                                        if (! SingletonHome.categories.value.any { it == category.id }) {
+                                                if (SingletonHome.isEditMode.value) {
+//                                                    Log.e("ConfigStore",SingletonStoreConfig.toString())
+//                                                    Log.e("caaaatts",SingletonHome.categories.value.toString())
+                                                    // When category exists in the selected categories in SingletonStoreConfig
+                                                    if (CustomSingleton.selectedStore!!.storeConfig!!.categories.any { it == category.id }) {
+
+                                                        // If category is not already added, display "تمت الاضافة بانتظار التأكيد"
+                                                        if (category.id !in SingletonHome.categories.value) {
                                                             Text(
                                                                 "تمت الاضافة بانتظار التأكيد",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
-                                                                        SingletonHome.categories.value +=category.id
-                                                                    })
-                                                        }
-                                                        else{
+                                                                        SingletonHome.categories.value += category.id
+                                                                    }
+                                                            )
+                                                        } else { // If category is already in the list, display "اضافة"
                                                             Text(
                                                                 "اضافة",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
-//                                                                        Log.e("rtrt", SingletonHome. categories.toString())
                                                                         SingletonHome.categories.value -= category.id
-//                                                                        Log.e("rtrt", SingletonHome. categories.toString())
-
-                                                                    })
+                                                                    }
+                                                            )
                                                         }
-                                                    }
-                                                    else{
-                                                        if ( SingletonHome.categories.value.any { it == category.id }){
-                                                            Text("تمت الحذف بانتظار التأكيد",
+                                                    } else { // If category is not in SingletonStoreConfig categories
+                                                        // If the category is already in SingletonHome.categories.value, display "تمت الحذف بانتظار التأكيد"
+                                                        if (category.id in SingletonHome.categories.value) {
+                                                            Text(
+                                                                "تمت الحذف بانتظار التأكيد",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
                                                                         SingletonHome.categories.value -= category.id
-                                                                    })
-                                                        }else{
-                                                            Text("حذف",
+                                                                    }
+                                                            )
+                                                        } else { // If category is not in SingletonHome.categories.value, display "حذف"
+                                                            Text(
+                                                                "حذف",
                                                                 Modifier
                                                                     .align(Alignment.BottomEnd)
                                                                     .clickable {
-                                                                        SingletonHome.categories.value+=category.id
-                                                                    })
+                                                                        SingletonHome.categories.value += category.id
+                                                                    }
+                                                            )
                                                         }
-
                                                     }
                                                 }
+
+
+//                                                if (SingletonHome.isEditMode.value){
+//                                                    if (SingletonStoreConfig.categories.value.any { number -> number == category.id }){
+//                                                        if (!SingletonHome.categories.value.any { it == category.id }) {
+//                                                            Text(
+//                                                                "تمت الاضافة بانتظار التأكيد",
+//                                                                Modifier
+//                                                                    .align(Alignment.BottomEnd)
+//                                                                    .clickable {
+//                                                                        SingletonHome.categories.value +=category.id
+//                                                                    })
+//                                                        }
+//                                                        else{
+//                                                            Text(
+//                                                                "اضافة",
+//                                                                Modifier
+//                                                                    .align(Alignment.BottomEnd)
+//                                                                    .clickable {
+////                                                                        Log.e("rtrt", SingletonHome. categories.toString())
+//                                                                        SingletonHome.categories.value -= category.id
+////                                                                        Log.e("rtrt", SingletonHome. categories.toString())
+//
+//                                                                    })
+//                                                        }
+//                                                    }
+//                                                    else{
+//                                                        if ( SingletonHome.categories.value.any { it == category.id }){
+//                                                            Text("تمت الحذف بانتظار التأكيد",
+//                                                                Modifier
+//                                                                    .align(Alignment.BottomEnd)
+//                                                                    .clickable {
+//                                                                        SingletonHome.categories.value -= category.id
+//                                                                    })
+//                                                        }else{
+//                                                            Text("حذف",
+//                                                                Modifier
+//                                                                    .align(Alignment.BottomEnd)
+//                                                                    .clickable {
+//                                                                        SingletonHome.categories.value+=category.id
+//                                                                    })
+//                                                        }
+//
+//                                                    }
+//                                                }
+
                                                 }
+
                                             }
                                         }
+                            if (SelectedStore.store.value!!.typeId != 1)
                             item {
                                 Card(
                                     Modifier
@@ -513,7 +607,7 @@ fun addCategory(name:String, onSuccess: (data: Category) -> Unit) {
     val body = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
         .addFormDataPart("name",name)
-        .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+        .addFormDataPart("storeId", CustomSingleton.selectedStore!!.id.toString())
         .build()
 
     requestServer.request2(body, "addCategory", { code, fail ->
@@ -525,7 +619,7 @@ fun addCategory(name:String, onSuccess: (data: Category) -> Unit) {
                 data
             )
         onSuccess(result)
-        homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),SingletonStoreConfig.storeId)
+        homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(result),CustomSingleton.selectedStore!!.id.toString())
         SingletonHome.stateController.successStateAUD()
     }
 }
@@ -534,10 +628,10 @@ fun readCategories() {
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .addFormDataPart("storeId", CustomSingleton.getCustomStoreId().toString())
             .build()
 
-        requestServer.request(body, "${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/getCategories", { code, fail ->
+        requestServer.request2(body, "getCategories", { code, fail ->
             SingletonHome.stateController.errorStateAUD(fail)
         }
         ) { data ->
@@ -555,18 +649,18 @@ private fun add(categoryId:String) {
 
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId",SingletonStoreConfig.storeId)
+            .addFormDataPart("storeId",CustomSingleton.getCustomStoreId().toString())
             .addFormDataPart("categoryId",categoryId)
             .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addStoreCategory",{code,fail->
+        requestServer.request2(body,"addStoreCategory",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
             val result: StoreCategory =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
 
             SingletonHome.home.value!!.storeCategories += result
-            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),CustomSingleton.getCustomStoreId().toString())
             isShowAddCatgory.value = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")
         }
@@ -585,6 +679,8 @@ private fun add(categoryId:String) {
                     .fillMaxSize()
                     .padding(bottom = 10.dp)
             ){
+                var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
+
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Top
@@ -629,6 +725,21 @@ private fun add(categoryId:String) {
                                     )
                                 }
                             }
+
+                            IconDelete(ids) {
+
+
+                                if (!CustomSingleton.isSharedStore())
+                                    deleteCategories(ids){
+                                        isShowAddCatgory.value = false
+                                        categories.value.forEach {
+                                            if (it.id in ids){
+                                                categories.value -= it
+                                            }
+                                        }
+                                    }
+                            }
+
                         }
                     }
 
@@ -641,6 +752,14 @@ private fun add(categoryId:String) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
+                                Checkbox(checked = ids.find { it == category.id } != null, onCheckedChange = {
+                                    val itemC = ids.find { it == category.id}
+                                    if (itemC == null) {
+                                        ids = ids + category.id
+                                    }else{
+                                        ids = ids - category.id
+                                    }
+                                })
                                 Text(category.name)
                                 Button(
                                     enabled = !SingletonHome.home.value!!.storeCategories.any { it.categoryId == category.id } && category.acceptedStatus != 0,
@@ -654,6 +773,44 @@ private fun add(categoryId:String) {
 
                 }
             }
+
+
+        }
+
+
+    }
+    fun deleteCategories(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteCategories",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
+            stateController.successStateAUD()
         }
     }
+    fun deleteStoreCategories(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteStoreCategories",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
+            stateController.successStateAUD()
+        }
+    }
+
+
 }

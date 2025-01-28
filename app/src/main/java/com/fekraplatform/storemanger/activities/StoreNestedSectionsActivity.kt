@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +45,8 @@ import com.fekraplatform.storemanger.models.NestedSection
 import com.fekraplatform.storemanger.models.Section
 import com.fekraplatform.storemanger.models.StoreNestedSection
 import com.fekraplatform.storemanger.models.StoreSection
+import com.fekraplatform.storemanger.shared.CustomSingleton
+import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -53,7 +57,7 @@ import kotlinx.serialization.encodeToString
 import okhttp3.MultipartBody
 
 class StoreNestedSectionsActivity : ComponentActivity() {
-    private val storeNestedSections = mutableStateOf<List<StoreNestedSection>>(listOf())
+//    private val storeNestedSections = mutableStateOf<List<StoreNestedSection>>(listOf())
     private val nestedSections = mutableStateOf<List<NestedSection>>(listOf())
     val stateController = StateController()
     val requestServer = RequestServer(this)
@@ -84,16 +88,27 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                         0.dp, stateController, this,
                         {  },
                     ) {
+                        var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
+
+                        IconDelete(ids) {
+                            deleteStoreNestedSections(ids){
+                                SingletonHome.home.value!!.storeNestedSections.forEach {
+                                    if (it.id in ids)
+                                        SingletonHome.home.value!!.storeNestedSections -= it
+                                }
+                            }
+                        }
+
                         LazyColumn {
                             item {
                                 SingletonStoreConfig.EditModeCompose()
                             }
 
-                            val nestedCats = if (SingletonStoreConfig.isSharedStore()){
-                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeNestedSections.filter { it.storeSectionId == storeSection.id } else SingletonHome.home.value!!.storeNestedSections .filter { it.storeSectionId == storeSection.id }.filterNot { it.id in SingletonStoreConfig.nestedSection.value }                            }
-                            else SingletonHome.home.value!!.storeNestedSections.filter { it.storeSectionId == storeSection.id }
 
-                            itemsIndexed(nestedCats){index, nestedSection ->
+
+                            itemsIndexed(if (CustomSingleton.isSharedStore()){
+                                if (SingletonHome.isEditMode.value) SingletonHome.home.value!!.storeNestedSections.filter { it.storeSectionId == storeSection.id } else SingletonHome.home.value!!.storeNestedSections .filter { it.storeSectionId == storeSection.id }.filterNot { it.id in CustomSingleton.selectedStore!!.storeConfig!!.nestedSections }                            }
+                            else SingletonHome.home.value!!.storeNestedSections.filter { it.storeSectionId == storeSection.id }){index, storeNestedSection ->
 
                                 Card(
                                     Modifier
@@ -105,56 +120,72 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                                         Modifier
                                             .fillMaxSize()
                                             .clickable {
-                                                if (! SingletonHome.nestedSection.value.any { it == nestedSection.id })    goToProduct(nestedSection)
+                                                if (! SingletonHome.nestedSection.value.any { it == storeNestedSection.id })    goToProduct(storeNestedSection)
                                             }
                                     ){
-                                        Text(nestedSection.nestedSectionName,Modifier.align(Alignment.Center))
-                                        if (SingletonHome.isEditMode.value){
-                                            if (SingletonStoreConfig.nestedSection.value.any { number -> number == nestedSection.id }){
-                                                if (! SingletonHome.nestedSection.value.any { it == nestedSection.id }) {
+                                        Text(storeNestedSection.nestedSectionName,Modifier.align(Alignment.Center))
+                                        if (!CustomSingleton.isSharedStore())
+                                        Checkbox(
+                                            modifier = Modifier.align(Alignment.CenterStart),
+                                            checked = ids.find { it == storeNestedSection.id } != null, onCheckedChange = {
+                                                val itemC = ids.find { it == storeNestedSection.id}
+                                                if (itemC == null) {
+                                                    ids = ids + storeNestedSection.id
+                                                }else{
+                                                    ids = ids - storeNestedSection.id
+                                                }
+                                            })
+                                        Column {
+
+                                            if (SingletonHome.isEditMode.value){
+                                            if (CustomSingleton.selectedStore!!.storeConfig!!.nestedSections.any { number -> number == storeNestedSection.id }){
+                                                if (! SingletonHome.nestedSection.value.any { it == storeNestedSection.id }) {
                                                     Text(
                                                         "تمت الاضافة بانتظار التأكيد",
                                                         Modifier
-                                                            .align(Alignment.BottomEnd)
                                                             .clickable {
-                                                                SingletonHome.nestedSection.value +=nestedSection.id
+                                                                SingletonHome.nestedSection.value +=storeNestedSection.id
                                                             })
                                                 }
                                                 else{
                                                     Text(
                                                         "اضافة",
                                                         Modifier
-                                                            .align(Alignment.BottomEnd)
+
                                                             .clickable {
 //                                                                        Log.e("rtrt", SingletonHome. categories.toString())
-                                                                SingletonHome.nestedSection.value -= nestedSection.id
+                                                                SingletonHome.nestedSection.value -= storeNestedSection.id
 //                                                                        Log.e("rtrt", SingletonHome. categories.toString())
 
                                                             })
                                                 }
                                             }
                                             else{
-                                                if ( SingletonHome.nestedSection.value.any { it == nestedSection.id }){
+                                                if ( SingletonHome.nestedSection.value.any { it == storeNestedSection.id }){
                                                     Text("تمت الحذف بانتظار التأكيد",
                                                         Modifier
-                                                            .align(Alignment.BottomEnd)
+
                                                             .clickable {
-                                                                SingletonHome.nestedSection.value -= nestedSection.id
+                                                                SingletonHome.nestedSection.value -= storeNestedSection.id
                                                             })
                                                 }else{
                                                     Text("حذف",
                                                         Modifier
-                                                            .align(Alignment.BottomEnd)
+
                                                             .clickable {
-                                                                SingletonHome.nestedSection.value+=nestedSection.id
+                                                                SingletonHome.nestedSection.value+=storeNestedSection.id
                                                             })
                                                 }
 
                                             }
                                         }
+                                        }
+
+
                                     }
                                 }
                             }
+                            if (!CustomSingleton.isSharedStore())
                             item {
                                 Card(
                                     Modifier
@@ -267,8 +298,8 @@ private fun add(nestedSectionId: String) {
                 it
             )
 
-            storeNestedSections.value += result
-            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
+            SingletonHome.home.value!!.storeNestedSections += result
+            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),CustomSingleton.getCustomStoreId().toString())
             SingletonHome.home.value!!.storeNestedSections += result
             isShowAddSection.value = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")
@@ -278,6 +309,7 @@ private fun add(nestedSectionId: String) {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun modalAddMyCategory() {
+        var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
         if (nestedSections.value.isEmpty()) {
             readNestedSections()
         }
@@ -332,6 +364,17 @@ private fun add(nestedSectionId: String) {
                                     )
                                 }
                             }
+                            IconDelete(ids) {
+                                if (!CustomSingleton.isSharedStore())
+                                deleteNestedSections(ids){
+                                    isShowAddSection.value = false
+                                    nestedSections.value.forEach {
+                                        if (it.id in ids){
+                                            nestedSections.value -= it
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -344,6 +387,15 @@ private fun add(nestedSectionId: String) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
+                                Checkbox(checked = ids.find { it == nestedSection.id } != null, onCheckedChange = {
+                                    val itemC = ids.find { it == nestedSection.id}
+                                    if (itemC == null) {
+                                        ids = ids + nestedSection.id
+                                    }else{
+                                        ids = ids - nestedSection.id
+                                    }
+                                })
+
                                 Text(nestedSection.name)
                                 Button(
                                     enabled = !SingletonHome.home.value!!.storeNestedSections.any { it.nestedSectionId == nestedSection.id } && nestedSection.acceptedStatus != 0,
@@ -405,10 +457,10 @@ private fun add(nestedSectionId: String) {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("sectionId", storeSection.sectionId.toString())
-            .addFormDataPart("storeId",  SingletonStoreConfig.storeId)
+            .addFormDataPart("storeId",  CustomSingleton.getCustomStoreId().toString())
             .build()
         Log.e("fr1",storeSection.sectionId.toString())
-        Log.e("fr2",SingletonStoreConfig.storeId)
+        Log.e("fr2",CustomSingleton.getCustomStoreId().toString())
 
 
         requestServer.request2(body, "getNestedSections", { code, fail ->
@@ -428,7 +480,7 @@ private fun add(nestedSectionId: String) {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("name",name)
-            .addFormDataPart("storeId", SingletonStoreConfig.storeId)
+            .addFormDataPart("storeId", CustomSingleton.getCustomStoreId().toString())
             .addFormDataPart("sectionId", storeSection.sectionId.toString())
             .build()
 
@@ -438,6 +490,39 @@ private fun add(nestedSectionId: String) {
         ) { data ->
             val result: NestedSection = MyJson.IgnoreUnknownKeys.decodeFromString(data)
             onSuccess(result)
+            stateController.successStateAUD()
+        }
+    }
+
+    fun deleteNestedSections(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteNestedSections",{code,fail->
+        stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
+            stateController.successStateAUD()
+        }
+    }
+    fun deleteStoreNestedSections(ids:List<Int>,onDone:()->Unit) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("ids",ids.toString())
+            .build()
+
+        requestServer.request2(body,"deleteStoreNestedSections",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+            onDone()
             stateController.successStateAUD()
         }
     }

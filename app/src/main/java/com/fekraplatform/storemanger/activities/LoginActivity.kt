@@ -42,6 +42,7 @@ import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.shared.AToken
 import com.fekraplatform.storemanger.shared.AppInfoMethod
+import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.MainCompose2
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
@@ -64,6 +65,7 @@ class LoginActivity : ComponentActivity() {
     lateinit var varRemoteConfig:VarRemoteConfig
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CustomSingleton.remoteConfig = requestServer.serverConfig.getRemoteConfig()
         Log.e("subsecribed??",requestServer.serverConfig.getSubscribeApp())
         if (!requestServer.serverConfig.isSetSubscribeApp())
             subscribeToAppTobic()

@@ -15,7 +15,7 @@ import com.fekraplatform.storemanger.models.StoreProduct
 import java.time.LocalDateTime
 
 const val DATABASE_PRODUCT_NAME = "products.db"
-const val DATABASE_PRODUCT_VERSION = 14
+const val DATABASE_PRODUCT_VERSION = 16
 class StoreProductStructure{
     companion object {
 
@@ -28,6 +28,8 @@ class StoreProductStructure{
         const val COLUMN_STORE_ID = "storeId"
         const val COLUMN_PRODUCT_NAME = "productName"
         const val COLUMN_PRODUCT_DESCRIPTION = "productDescription"
+        const val COLUMN_PRODUCT_View_Id = "productViewId"
+        const val COLUMN_PRODUCT_View_Name = "productViewName"
     }
 }
 class ProductOptionStructure{
@@ -79,6 +81,8 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
                     + StoreProductStructure.COLUMN_STORE_NESTED_SECTION_ID + " INTEGER, "
                     + StoreProductStructure.COLUMN_STORE_ID + " INTEGER, "
                     + StoreProductStructure.COLUMN_PRODUCT_NAME + " TEXT, "
+                    + StoreProductStructure.COLUMN_PRODUCT_View_Id + " INTEGER, "
+                    + StoreProductStructure.COLUMN_PRODUCT_View_Name + " TEXT, "
                     + StoreProductStructure.COLUMN_PRODUCT_DESCRIPTION + " TEXT)")
 
         // Creating Options table
@@ -127,7 +131,8 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
                 val storeNestedSectionId1 = cursor.getInt(cursor.getColumnIndex(StoreProductStructure.COLUMN_STORE_NESTED_SECTION_ID))
                 val productName = cursor.getString(cursor.getColumnIndex(StoreProductStructure.COLUMN_PRODUCT_NAME))
                 val productDescription = cursor.getString(cursor.getColumnIndex(StoreProductStructure.COLUMN_PRODUCT_DESCRIPTION))
-
+                val COLUMN_PRODUCT_View_Id = cursor.getInt(cursor.getColumnIndex(StoreProductStructure.COLUMN_PRODUCT_View_Id))
+                val COLUMN_PRODUCT_View_Name = cursor.getString(cursor.getColumnIndex(StoreProductStructure.COLUMN_PRODUCT_View_Name))
                 // Fetch options for this storeProductId
                 val options = getOptionsForStoreProduct(storeNestedSectionId1,productId.toString())
 
@@ -135,8 +140,8 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
                 val images = getImagesForStoreProduct(productId.toString())
 
                 // Add store product with its options and images
-                val storeProduct = StoreProduct(productId,storeNestedSectionId1, productName, productDescription, options, images)
-                storeProductsList.add(storeProduct)
+//                val storeProduct = StoreProduct(productId,COLUMN_PRODUCT_View_Name,COLUMN_PRODUCT_View_Id,storeNestedSectionId1, productName, productDescription, options, images)
+//                storeProductsList.add(storeProduct)
 
             } while (cursor.moveToNext())
         }
@@ -232,13 +237,12 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
                 val name = cursor.getString(cursor.getColumnIndex(ProductOptionStructure.COLUMN_NAME))
                 val price = cursor.getString(cursor.getColumnIndex(ProductOptionStructure.COLUMN_PRICE))
 
-                val option = ProductOption(optionId.toInt(),storeProductId, name, price)
-                optionsList.add(option)
+//                val option = ProductOption(optionId.toInt(),storeProductId, name, price)
+//                optionsList.add(option)
             } while (cursor.moveToNext())
         }
         cursor.close()
         db.close()
-
         return optionsList
     }
 
@@ -266,7 +270,7 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
     }
 
     // CRUD Operations for Products Table (with manual ID management)
-    fun addProductStore(db: SQLiteDatabase,productId: String,storeId:String,storeNestedSectionId:Int,name: String, description: String) {
+    fun addProductStore(db: SQLiteDatabase,productId: String,storeId:String,storeNestedSectionId:Int,name: String, description: String,productViewId:Int,productViewName:String) {
 
         val values = ContentValues()
         values.put(StoreProductStructure.COLUMN_PRODUCT_NAME, name)
@@ -274,6 +278,8 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
         values.put(StoreProductStructure.COLUMN_PRODUCT_ID, productId)
         values.put(StoreProductStructure.COLUMN_STORE_NESTED_SECTION_ID, storeNestedSectionId)
         values.put(StoreProductStructure.COLUMN_STORE_ID, storeId)
+        values.put(StoreProductStructure.COLUMN_PRODUCT_View_Id, productViewId)
+        values.put(StoreProductStructure.COLUMN_PRODUCT_View_Name, productViewName)
         // Inserting Row
          db.insert(StoreProductStructure.TABLE_PRODUCTS, null, values)
 
@@ -318,15 +324,16 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
         db.beginTransaction()
         try {
             storeProducts.forEach { storeProduct->
-                addProductStore(db,storeProduct.productId.toString(),
-                    storeId,storeNestedSectionId,storeProduct.productName,storeProduct.productDescription.toString())
-                storeProduct.options.forEach { option ->
-                    addProductOption(db,option.storeProductId.toString(),option.optionId.toString(),storeNestedSectionId,storeProduct.productId.toString(),option.name.toString(),option.price)
-                }
+//                addProductStore(db,storeProduct.productId.toString(),
+//                    storeId,storeNestedSectionId,storeProduct.productName,storeProduct.productDescription.toString(),storeProduct.productViewId,storeProduct.productViewName)
 
-                storeProduct.images.forEach { image ->
-                    addImage(db,image.id.toString(),storeProduct.productId.toString(),image.image.toString())
-                }
+//                storeProduct.options.forEach { option ->
+//                    addProductOption(db,option.storeProductId.toString(),option.optionId.toString(),storeNestedSectionId,storeProduct.productId.toString(),option.name.toString(),option.price)
+//                }
+
+//                storeProduct.images.forEach { image ->
+//                    addImage(db,image.id.toString(),storeProduct.productId.toString(),image.image.toString())
+//                }
 
             }
 
@@ -344,19 +351,18 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
 
     fun addStoreProduct(storeProduct:StoreProduct,storeId: String,storeNestedSectionId: Int) {
         val db = this.writableDatabase
-
         db.beginTransaction()
         try {
 
-                addProductStore(db,storeProduct.productId.toString(),
-                    storeId,storeNestedSectionId,storeProduct.productName,storeProduct.productDescription.toString())
-                storeProduct.options.forEach { option ->
-                    addProductOption(db,option.storeProductId.toString(),option.optionId.toString(),storeNestedSectionId,storeProduct.productId.toString(),option.name.toString(),option.price)
-                }
+//                addProductStore(db,storeProduct.productId.toString(),
+//                    storeId,storeNestedSectionId,storeProduct.productName,storeProduct.productDescription.toString(),storeProduct.productViewId,storeProduct.productViewName)
+//                storeProduct.options.forEach { option ->
+//                    addProductOption(db,option.storeProductId.toString(),option.optionId.toString(),storeNestedSectionId,storeProduct.productId.toString(),option.name.toString(),option.price)
+//                }
 
-                storeProduct.images.forEach { image ->
-                    addImage(db,image.id.toString(),storeProduct.productId.toString(),image.image.toString())
-                }
+//                storeProduct.images.forEach { image ->
+//                    addImage(db,image.id.toString(),storeProduct.productId.toString(),image.image.toString())
+//                }
             db.setTransactionSuccessful()
         } catch (e: Exception) {
             // Handle any exceptions if necessary (optional)
@@ -389,26 +395,6 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
 
 
 
-    fun getProduct(id: Long): Cursor? {
-        val db = this.readableDatabase
-        val query = "SELECT * FROM ${StoreProductStructure.TABLE_PRODUCTS} WHERE ${StoreProductStructure.COLUMN_PRODUCT_ID} = ?"
-        return db.rawQuery(query, arrayOf(id.toString()))
-    }
-
-    fun getAllProducts(): Cursor? {
-        val db = this.readableDatabase
-        val query = "SELECT * FROM ${StoreProductStructure.TABLE_PRODUCTS}"
-        return db.rawQuery(query, null)
-    }
-
-//
-//    fun deleteProduct(id: Long): Int {
-//        val db = this.writableDatabase
-//        val result = db.delete(ProductStructure.TABLE_PRODUCTS, "${ProductStructure.COLUMN_PRODUCT_ID} = ?", arrayOf(id.toString()))
-//        db.close()
-//        return result
-//    }
-
     // CRUD Operations for Product Options Table (with manual ID management)
     fun addProductOption(db: SQLiteDatabase, storeProductId:String, optionId:String,nestedSectionId:Int, productId:String, name: String, price:String) {
         val values = ContentValues()
@@ -423,24 +409,6 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
 
     }
 
-    fun getOptionsByProductId(productId: String): Cursor? {
-        val db = this.readableDatabase
-        val query = "SELECT * FROM ${ProductOptionStructure.TABLE_OPTIONS} WHERE ${ProductOptionStructure.COLUMN_PRODUCT_ID} = ?"
-        return db.rawQuery(query, arrayOf(productId))
-    }
-
-    fun getAllOptions(): Cursor? {
-        val db = this.readableDatabase
-        val query = "SELECT * FROM ${ProductOptionStructure.TABLE_OPTIONS}"
-        return db.rawQuery(query, null)
-    }
-
-    fun deleteOption(id: Long): Int {
-        val db = this.writableDatabase
-        val result = db.delete(ProductOptionStructure.TABLE_OPTIONS, "${ProductOptionStructure.COLUMN_OPTION_ID} = ?", arrayOf(id.toString()))
-        db.close()
-        return result
-    }
 
     // CRUD Operations for Product Images Table (with manual ID management)
     fun addImage(db: SQLiteDatabase,id: String,productId: String,imagePath: String) {
@@ -453,46 +421,4 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
      db.insert(ProductImagesStructure.TABLE_IMAGES, null, values)
 
     }
-
-    fun getImagesByProductId(productId: String): Cursor? {
-        val db = this.readableDatabase
-        val query = "SELECT * FROM ${ProductImagesStructure.TABLE_IMAGES} WHERE ${ProductImagesStructure.COLUMN_PRODUCT_ID} = ?"
-        return db.rawQuery(query, arrayOf(productId.toString()))
-    }
-
-    fun getAllImages(): Cursor? {
-        val db = this.readableDatabase
-        val query = "SELECT * FROM ${ProductImagesStructure.TABLE_IMAGES}"
-        return db.rawQuery(query, null)
-    }
-
-    fun deleteImage(id: Long): Int {
-        val db = this.writableDatabase
-        val result = db.delete(ProductImagesStructure.TABLE_IMAGES, "${ProductImagesStructure.COLUMN_ID} = ?", arrayOf(id.toString()))
-        db.close()
-        return result
-    }
 }
-
-//
-//class ProductsStorage(val categoryId:String) {
-//    private val getStorage = GetStorage("products")
-//    private val homeComponentKey = "homeComponentKey"
-//    private val dateKey = "dateKey"
-//
-//    fun isSetHomeComponent():Boolean{
-//        return getStorage.getData(homeComponentKey).isNotEmpty()
-//    }
-//    fun setHomeComponent(data:String){
-//        val currentDate: LocalDateTime = LocalDateTime.now()
-//        getStorage.setData(dateKey,currentDate.toString())
-//        getStorage.setData(homeComponentKey,data)
-//    }
-//
-//    fun getDate(): LocalDateTime? {
-//        return (LocalDateTime.parse(getStorage.getData(dateKey)))
-//    }
-//    fun getHomeComponent(): HomeComponent {
-//        return MyJson.IgnoreUnknownKeys.decodeFromString(getStorage.getData(homeComponentKey))
-//    }
-//}

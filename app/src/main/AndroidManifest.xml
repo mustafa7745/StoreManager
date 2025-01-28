@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:name=".application.MyApplication"
@@ -16,6 +18,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.StoreManger"
         tools:targetApi="31">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCnwhwO-jKSK8zcbcfeVFPKE0S4F4Y1m-Q" />
         <activity
             android:name=".activities.LoginActivity"
             android:exported="true"
@@ -51,7 +56,28 @@
             android:name=".activities.ProductsActivity"
             android:exported="false"/>
         <activity
-            android:name=".activities.MyProductsActivity"
+            android:name=".activities.LocationStoreActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.SettingsStoreActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.StoreOrdersActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".activities.OrderProductsActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".activities.StoreDeliveryMenActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".activities.StoreNotificationsActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false"/>
 
         <service

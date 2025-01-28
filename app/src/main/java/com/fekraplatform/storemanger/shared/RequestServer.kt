@@ -92,17 +92,22 @@ class RequestServer(private val activity: ComponentActivity) {
     fun request2(body: RequestBody,urlPostfix:String,onFail:(code:Int, fail:String)->Unit, onSuccess:(data:String)->Unit,) {
         if (!isInternetAvailable()) {
             onFail(0, "لايوجد اتصال بالانترنت")
-        }else{
-            if (!serverConfig.isSetRemoteConfig()){
-                initVarConfig(serverConfig,{
-                    onFail(0, "E 5286")
-                }){
-                    mainRequest(urlPostfix, body, onSuccess, onFail)
-                }
-            }else{
-                mainRequest(urlPostfix, body, onSuccess, onFail)
-            }
+        } else {
+            mainRequest(urlPostfix, body, onSuccess, onFail)
         }
+//        if (!isInternetAvailable()) {
+//            onFail(0, "لايوجد اتصال بالانترنت")
+//        }else{
+//            if (!serverConfig.isSetRemoteConfig()){
+//                initVarConfig(serverConfig,{
+//                    onFail(0, "E 5286")
+//                }){
+//                    mainRequest(urlPostfix, body, onSuccess, onFail)
+//                }
+//            }else{
+//                mainRequest(urlPostfix, body, onSuccess, onFail)
+//            }
+//        }
     }
 
     private fun mainRequest(

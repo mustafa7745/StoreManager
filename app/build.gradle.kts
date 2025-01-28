@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "1.8.10"
     id("com.google.gms.google-services")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -67,4 +68,16 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx:23.4.1")
     implementation("com.google.firebase:firebase-config")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
+    implementation(libs.play.services.location)
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    implementation (libs.android.maps.utils)
+
+    val room_version = "2.6.1"
+
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+    implementation(libs.firebase.admin)
+
 }
