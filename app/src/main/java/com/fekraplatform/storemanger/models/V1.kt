@@ -10,19 +10,34 @@ data class Store(
     val logo : String,
     val cover : String,
     var latLng:String?,
+    val deliveryPrice:Double,
+    val currencyId:Int,
+    val currencyName: String,
     val app: App?,
+    val subscription: Subscription,
     var storeConfig:StoreConfig?
 )
 
 @Serializable
 data class App(
     val id: Int,
+    val hasServiceAccount:Boolean
+)
+@Serializable
+data class Subscription(
+    val id: Int,
+    val points: Int,
+    val expireAt:String,
+    val isPremium:Int
 )
 
 @Serializable
 data class Order(
     val id: Int,
     val userName: String,
+    val situation: String,
+    val situationId: Int,
+    val createdAt: String,
     val userPhone: String,
     val amounts:List<OrderAmount>
 )
@@ -40,6 +55,7 @@ data class OrderProduct(
     val id: Int,
     val productName: String,
     val currencyName: String,
+    val currencyId: Int,
     val optionName: String,
     val quantity:Int,
     val price:Double,
@@ -115,6 +131,7 @@ data class OrderComponent(
 @Serializable
 data class OrderAmount(
     val id: Int,
+    val currencyId: Int,
     val currencyName: String,
     val amount: String,
 )
@@ -194,9 +211,25 @@ data class StoreSection(
 
 @Serializable
 data class Home(
+    val ads :List<Ads>,
     var storeCategories: List<StoreCategory>,
     var storeSections:List<StoreSection>,
     var storeNestedSections:List<StoreNestedSection>
+)
+
+@Serializable
+data class Ads(
+    val id: Int,
+    val image: String,
+    val productId:Int?,
+    val expireAt: String,
+)
+
+@Serializable
+data class MorableStoreProducts(
+    val id: Int,
+    val image: String,
+    val productId:Int?,
 )
 
 @Serializable
@@ -213,6 +246,12 @@ data class StoreProduct(
     val product: Product,
     val storeNestedSectionId:Int,
     val options: List<ProductOption>,
+)
+@Serializable
+data class CustomPrice(
+    val id: Int,
+    val storeProductId: Int,
+    val price:String,
 )
 
 //@Serializable
@@ -238,7 +277,8 @@ data class ProductOption(
     val currency: Currency,
     val storeProductId: Int,
     val name: String,
-    val price: String
+    val price: String,
+    val isCustomPrice:Boolean
 )
 @Serializable
 data class Currency(
@@ -270,4 +310,8 @@ data class ProductView(
     val products:List<StoreProduct>
 )
 
+@Serializable
 data class CustomOption (val id:Int, val name:String)
+
+@Serializable
+data class StoreOrders (val situations:List<CustomOption>, val orders:List<Order>)

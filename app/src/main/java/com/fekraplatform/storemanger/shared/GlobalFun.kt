@@ -13,13 +13,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -136,7 +139,7 @@ fun MainCompose2(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = padding),
+            .padding(top = padding).safeDrawingPadding(),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -235,7 +238,7 @@ fun CustomImageViewUri(
 //        imageLoader = imageLoader,
         contentDescription = contentDescription,
         modifier = modifier.fillMaxSize(),
-        contentScale = ContentScale.Fit
+        contentScale = contentScale
     )
 }
 @Composable
@@ -318,17 +321,23 @@ fun initVarConfig(serverConfig: ServerConfig,onFail:()->Unit,onSuccess: () -> Un
         }
 }
 
-fun builderForm(token:String): MultipartBody.Builder {
+private fun sharedBuilderForm(): MultipartBody.Builder {
     val appInfoMethod = AppInfoMethod()
     return MultipartBody.Builder()
         .setType(MultipartBody.FORM)
+//        .addFormDataPart("sha", appInfoMethod.getAppSha())
         .addFormDataPart("sha", appInfoMethod.getAppSha())
-        .addFormDataPart("appToken", token)
         .addFormDataPart("packageName", appInfoMethod.getAppPackageName())
         .addFormDataPart("deviceId", appInfoMethod.getDeviceId().toString())
+}
+
+fun builderForm(token:String): MultipartBody.Builder {
+    return sharedBuilderForm()
+        .addFormDataPart("appToken", token)
         .addFormDataPart("model", Build.MODEL)
         .addFormDataPart("version", Build.VERSION.RELEASE)
 }
+
 fun builderForm2(): MultipartBody.Builder {
     val appInfoMethod = AppInfoMethod()
     return MultipartBody.Builder()
@@ -342,11 +351,13 @@ fun builderForm2(): MultipartBody.Builder {
 }
 
 fun builderForm3(): MultipartBody.Builder {
-    val appInfoMethod = AppInfoMethod()
-    return MultipartBody.Builder()
-        .setType(MultipartBody.FORM)
+    return sharedBuilderForm()
         .addFormDataPart("accessToken",AToken().getAccessToken().token)
-        .addFormDataPart("deviceId", appInfoMethod.getDeviceId().toString())
+}
+fun builderForm4(): MultipartBody.Builder {
+    return sharedBuilderForm()
+        .addFormDataPart("storeId",CustomSingleton.selectedStore!!.id.toString())
+        .addFormDataPart("accessToken",AToken().getAccessToken().token)
 }
 
 @Composable
@@ -400,6 +411,33 @@ fun CustomIcon(imageVector: ImageVector, border:Boolean=false, onClick: () -> Un
         )
     }
 }
+@Composable
+fun CustomIcon2(imageVector: ImageVector,
+               modifierIcon: Modifier = Modifier,
+               border:Boolean=false,
+               onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        val modifier = if (border) Modifier
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.primary,
+                RoundedCornerShape(
+                    16.dp
+                )
+            )
+            .clip(
+                RoundedCornerShape(
+                    16.dp
+                )
+            )
+        else Modifier
+        Icon(
+            modifier = modifierIcon,
+            imageVector = imageVector,
+            contentDescription = ""
+        )
+    }
+}
 
 @Composable
 fun CustomCard(modifierCard: Modifier = Modifier
@@ -417,15 +455,39 @@ fun CustomCard(modifierCard: Modifier = Modifier
         Box (
             modifier = modifierBox
 
-        ){
+        ) {
             content()
+        }
+    }
+}
+@Composable
+fun CustomCard2(modifierCard: Modifier = Modifier
+    .fillMaxWidth().padding(8.dp).border(1.dp, Color.Gray,
+        RoundedCornerShape(12.dp)),
+
+               modifierBox: Modifier ,
+               content: @Composable() (ColumnScope.() -> Unit)){
+    Card(
+        colors  = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier =  modifierCard
+    ){
+        Box (
+            modifier = modifierBox
+
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                content()
+            }
+
         }
     }
 }
 
 @Composable
 fun CustomRow(content: @Composable() (RowScope.() -> Unit)){
-    Row  (Modifier.fillMaxWidth().padding(8.dp),
+    Row  (Modifier.fillMaxWidth().padding(2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
         ){
@@ -435,8 +497,9 @@ fun CustomRow(content: @Composable() (RowScope.() -> Unit)){
 }
 @Composable
 fun CustomRow2(content: @Composable() (RowScope.() -> Unit)){
-    Row  (Modifier.fillMaxWidth().padding(8.dp),
+    Row  (Modifier.fillMaxWidth().padding(5.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
     ){
         content()
     }
@@ -471,4 +534,23 @@ fun formatPrice(price: String): String {
     val symbols = DecimalFormatSymbols(Locale.ENGLISH)
     val decimalFormat = DecimalFormat("#.##", symbols) // Format to two decimal places
     return decimalFormat.format(doublePrice)
+}
+
+@Composable
+fun MyHeader(onBack:()->Unit,otherSide:@Composable ()->Unit = {},content: @Composable ()->Unit){
+    CustomCard(modifierBox = Modifier) {
+        CustomRow {
+
+            Row (
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CustomIcon(Icons.AutoMirrored.Default.ArrowBack, border = true) {
+                onBack()
+            }
+               content()
+            }
+            otherSide()
+
+        }
+    }
 }

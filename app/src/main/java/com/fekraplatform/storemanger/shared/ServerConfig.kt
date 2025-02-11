@@ -30,9 +30,10 @@ class ServerConfig {
     fun isSetRemoteConfig():Boolean{
         return try {
             getRemoteConfig()
-            val diff =
-                Duration.between(getDate(), getCurrentDate()).toMinutes()
-            diff <= 1
+            true
+//            val diff =
+//                Duration.between(getDate(), getCurrentDate()).toMinutes()
+//            diff <= 1
         }catch (e:Exception){
             setRemoteConfig("")
             false

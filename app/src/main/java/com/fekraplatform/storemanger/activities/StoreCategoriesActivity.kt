@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,11 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -52,15 +55,18 @@ import com.fekraplatform.storemanger.models.Home
 import com.fekraplatform.storemanger.models.Store
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.StoreConfig
+import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomImageView
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
+import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.U1R
+import com.fekraplatform.storemanger.shared.builderForm3
 import com.fekraplatform.storemanger.storage.HomeStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import kotlinx.serialization.encodeToString
@@ -156,23 +162,24 @@ object SingletonHome {
     fun read(storeId: String) {
         stateController.startRead()
 
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("storeId",storeId)
+        val body = builderForm3()
+            .addFormDataPart("storeId",CustomSingleton.getOriginalStoreId().toString())
+//            .addFormDataPart("ostoreId",CustomSingleton.getOriginalStoreId().toString())
             .build()
 
         requestServer.request2(body, "getStoreCategories", { code, fail ->
             stateController.errorStateRead(fail)
         }
         ) { data ->
-            val result:Home =
+            val result: Home =
                 MyJson.IgnoreUnknownKeys.decodeFromString(
                     data
                 )
             home.value = result
-            homeStorage.setHome(data,storeId)
-            Log.e("dsd", home.value.toString())
-            Log.e("dsd2",result.toString())
+            homeStorage.setHome(data, storeId)
+        CustomSingleton.selectedStore = CustomSingleton.selectedStore!!.copy(
+            subscription = CustomSingleton.selectedStore!!.subscription.copy(points =  CustomSingleton.selectedStore!!.subscription.points -1)
+        )
             stateController.successState()
         }
     }
@@ -225,6 +232,7 @@ class StoreCategoriesActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
     val isShowAddCatgory = mutableStateOf(false)
+    var selectMode by mutableStateOf(false)
 
 
 
@@ -233,41 +241,42 @@ class StoreCategoriesActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SingletonHome.setStateController1(stateController)
         SingletonHome.setReqestController(requestServer)
-
-        val intent = intent
-        val str = intent.getStringExtra("store")
-        if (str != null) {
-            try {
-//                store =
-                val store:Store = MyJson.IgnoreUnknownKeys.decodeFromString(str)
-
-//                SingletonStoreConfig.typeId = store.typeId.toString()
-//                SingletonStoreConfig.storeId = store.id.toString()
-//                SingletonStoreConfig.logo = store.logo
-//                SingletonStoreConfig.cover = store.cover
-                if (store.storeConfig != null){
-
-//                    if (!SingletonStoreConfig.isSetValue){
-//                        SingletonStoreConfig.storeIdReference = store.storeConfig!!.storeIdReference.toString()
-//                        SingletonStoreConfig.categories.value = store.storeConfig!!.categories
-//                        SingletonStoreConfig.sections.value = store.storeConfig!!.sections
-//                        SingletonStoreConfig.nestedSection.value = store.storeConfig!!.nestedSections
-//                        SingletonStoreConfig.products.value = store.storeConfig!!.products
-//                    }
-                }
-
-
-            }catch (e:Exception){
-                finish()
-            }
-
-        } else {
-            finish()
-        }
-
-
-
-//        SingletonHome.stateController.successState()
+//
+        Log.e("fff",CustomSingleton.selectedStore.toString())
+//        val intent = intent
+//        val str = intent.getStringExtra("store")
+//        if (str != null) {
+//            try {
+////                store =
+//                val store:Store = MyJson.IgnoreUnknownKeys.decodeFromString(str)
+//
+////                SingletonStoreConfig.typeId = store.typeId.toString()
+////                SingletonStoreConfig.storeId = store.id.toString()
+////                SingletonStoreConfig.logo = store.logo
+////                SingletonStoreConfig.cover = store.cover
+//                if (store.storeConfig != null){
+//
+////                    if (!SingletonStoreConfig.isSetValue){
+////                        SingletonStoreConfig.storeIdReference = store.storeConfig!!.storeIdReference.toString()
+////                        SingletonStoreConfig.categories.value = store.storeConfig!!.categories
+////                        SingletonStoreConfig.sections.value = store.storeConfig!!.sections
+////                        SingletonStoreConfig.nestedSection.value = store.storeConfig!!.nestedSections
+////                        SingletonStoreConfig.products.value = store.storeConfig!!.products
+////                    }
+//                }
+//
+//
+//            }catch (e:Exception){
+//                finish()
+//            }
+//
+//        } else {
+//            finish()
+//        }
+//
+//
+//
+////        SingletonHome.stateController.successState()
 
         SingletonHome.initHome(CustomSingleton.getCustomStoreId().toString())
 
@@ -306,37 +315,54 @@ class StoreCategoriesActivity : ComponentActivity() {
 
                     MainCompose1 (
                         0.dp, SingletonHome.stateController, this,
-                        { SingletonHome.read(if (CustomSingleton.isSharedStore()) CustomSingleton.selectedStore!!.storeConfig!!.storeIdReference.toString() else CustomSingleton.selectedStore!!.id.toString()) },
+                        {
+                            SingletonHome.read(CustomSingleton.getCustomStoreId().toString())
+//                            SingletonHome.read(if (CustomSingleton.isSharedStore()) CustomSingleton.selectedStore!!.storeConfig!!.storeIdReference.toString() else CustomSingleton.selectedStore!!.id.toString()) },
+                        }
                     ) {
+
                         var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
-                        IconDelete(ids) {
-                            if (!CustomSingleton.isSharedStore())
-                                deleteStoreCategories(ids){
-                                  ids = emptyList()
+
+                        LazyColumn(Modifier.safeDrawingPadding()) {
+                            stickyHeader {
+                                MyHeader({
+                                    finish()
+                                },{
+                                    if (!CustomSingleton.isSharedStore()){
+                                        IconDelete(ids) {
+                                            if (!CustomSingleton.isSharedStore())
+                                                deleteStoreCategories(ids){
+                                                    ids = emptyList()
 //                                    nestedSections.value.forEach {
 //                                        if (it.id in ids){
 //                                            nestedSections.value -= it
 //                                        }
 //                                    }
-                                }
-                        }
-                        LazyColumn {
-                            stickyHeader {
-                                Card(Modifier.fillMaxWidth().height(100.dp).clickable {
+                                                }
+                                        }
+                                        CustomIcon(Icons.Default.Add,true) {
+                                            isShowAddCatgory.value = true
+                                        }
+                                    }
 
                                 }) {
-                                    CustomImageView(
-                                        modifier = Modifier.fillMaxWidth()
-                                            .height(80.dp)
-                                            .padding(8.dp)
-                                            .clickable {
-
-                                            },
-                                        context = this@StoreCategoriesActivity,
-                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_COVERS+CustomSingleton.selectedStore!!.cover,
-                                        okHttpClient = requestServer.createOkHttpClientWithCustomCert()
-                                    )
+                                    Text("الفئات الرئيسية")
                                 }
+//                                Card(Modifier.fillMaxWidth().height(100.dp).clickable {
+//
+//                                }) {
+//                                    CustomImageView(
+//                                        modifier = Modifier.fillMaxWidth()
+//                                            .height(80.dp)
+//                                            .padding(8.dp)
+//                                            .clickable {
+//
+//                                            },
+//                                        context = this@StoreCategoriesActivity,
+//                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_COVERS+CustomSingleton.selectedStore!!.cover,
+//                                        okHttpClient = requestServer.createOkHttpClientWithCustomCert()
+//                                    )
+//                                }
                             }
 
 //                            if ()
@@ -376,11 +402,18 @@ class StoreCategoriesActivity : ComponentActivity() {
                                             Box (
                                                 Modifier
                                                     .fillMaxSize()
-                                                    .clickable {
-                                                        if (! SingletonHome.categories.value.any { it == category.id }) goToSections(category)
-                                                    }
+                                                    .combinedClickable (
+                                                        onClick = {
+                                                            if (! SingletonHome.categories.value.any { it == category.id }) goToSections(category)
+
+                                                        },
+                                                        onLongClick = {
+                                                            selectMode = !selectMode
+                                                        }
+                                                    )
+
                                             ){
-                                                if (SelectedStore.store.value!!.typeId != 1)
+                                                if (!CustomSingleton.isSharedStore() && selectMode)
                                                 Checkbox(  modifier = Modifier.align(Alignment.CenterStart),checked = ids.find { it == category.id } != null, onCheckedChange = {
                                                     val itemC = ids.find { it == category.id}
                                                     if (itemC == null) {
@@ -490,25 +523,25 @@ class StoreCategoriesActivity : ComponentActivity() {
 
                                             }
                                         }
-                            if (SelectedStore.store.value!!.typeId != 1)
-                            item {
-                                Card(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(100.dp)
-                                        .padding(8.dp)
-                                ) {
-                                    Box (
-                                        Modifier
-                                            .fillMaxSize()
-                                            .clickable {
-                                                isShowAddCatgory.value = true
-                                            }
-                                    ){
-                                        Text("+", modifier = Modifier.align(Alignment.Center))
-                                    }
-                                }
-                            }
+//                            if (SelectedStore.store.value!!.typeId != 1)
+//                            item {
+//                                Card(
+//                                    Modifier
+//                                        .fillMaxWidth()
+//                                        .height(100.dp)
+//                                        .padding(8.dp)
+//                                ) {
+//                                    Box (
+//                                        Modifier
+//                                            .fillMaxSize()
+//                                            .clickable {
+//                                                isShowAddCatgory.value = true
+//                                            }
+//                                    ){
+//                                        Text("+", modifier = Modifier.align(Alignment.Center))
+//                                    }
+//                                }
+//                            }
 
 //                                }
 //                            }

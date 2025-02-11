@@ -3,12 +3,12 @@ package com.fekraplatform.storemanger.activities
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,23 +21,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,13 +41,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.room.Room
+import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.Singlton.SelectedStore
+import com.fekraplatform.storemanger.models.CustomOption
 import com.fekraplatform.storemanger.models.Store
+import com.fekraplatform.storemanger.shared.AToken
 import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomImageView
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
@@ -62,12 +60,9 @@ import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.builderForm3
-import com.fekraplatform.storemanger.storage.AppDatabase
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
 import kotlinx.serialization.encodeToString
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -79,36 +74,25 @@ import okio.BufferedSink
 class StoresActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
-    ////
-//    var CustomSingleton.selectedStore by mutableStateOf<Store?>(null)
     val isShowAddCatgory = mutableStateOf(false)
     val isShowUpdateStore = mutableStateOf(false)
     private lateinit var storeToUpdate: Store
     var uriLogo=mutableStateOf<Uri?>(null)
     var uriCover =mutableStateOf<Uri?>(null)
-
-//    var usrs by mutableStateOf<List<User>>(emptyList())
-
-
+    var isHaveMore by mutableStateOf(false)
 
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mainInit()
 
-//        val db = Room.databaseBuilder(
-//            applicationContext,
-//            AppDatabase::class.java, "database-name"
-//        ).build()
-
-
-        read()
         enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
 
                     MainCompose1 (
                         0.dp, stateController, this,
-                        { read() },
+                        { mainInit() },
                     ) {
                         LazyColumn(Modifier.safeDrawingPadding()) {
                             stickyHeader {
@@ -120,7 +104,24 @@ class StoresActivity : ComponentActivity() {
                             }
                             if (CustomSingleton.selectedStore!=null){
 
+                                item {
+                                    CustomCard2(modifierBox = Modifier) {
+                                        CustomImageView(
+                                            modifier = Modifier
+                                                .size(100.dp)
+                                                .padding(8.dp)
+                                                .clickable {
 
+                                                    storeToUpdate = CustomSingleton.selectedStore!!
+                                                    isShowUpdateStore.value = true
+                                                },
+                                            context = this@StoresActivity,
+                                            imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_LOGOS+CustomSingleton.selectedStore!!.logo,
+                                            okHttpClient = requestServer.createOkHttpClientWithCustomCert()
+                                        )
+                                }
+
+                                }
 
                                 item {
                                     Button(onClick = {
@@ -132,21 +133,7 @@ class StoresActivity : ComponentActivity() {
                                     }
                                 }
 
-                                item {
-                                    CustomImageView(
-                                        modifier = Modifier
-                                            .size(100.dp)
-                                            .padding(8.dp)
-                                            .clickable {
 
-                                                storeToUpdate = CustomSingleton.selectedStore!!
-                                                isShowUpdateStore.value = true
-                                            },
-                                        context = this@StoresActivity,
-                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_LOGOS+CustomSingleton.selectedStore!!.logo,
-                                        okHttpClient = requestServer.createOkHttpClientWithCustomCert()
-                                    )
-                                }
                                 item {
                                     Button(onClick = {
                                         SelectedStore.store.value = CustomSingleton.selectedStore!!
@@ -158,9 +145,9 @@ class StoresActivity : ComponentActivity() {
                                 }
                                 item {
                                     Button(onClick = {
-                                        gotoStorePosts()
+                                        gotoStoreAds()
                                     },Modifier.fillMaxWidth().padding(8.dp)) {
-                                        Text("المنشورات")
+                                        Text("الاعلانات")
                                     }
                                     Button(onClick = {
                                         SelectedStore.store.value = CustomSingleton.selectedStore!!
@@ -170,26 +157,36 @@ class StoresActivity : ComponentActivity() {
                                     }
                                 }
                                 item {
-                                    Button(onClick = {
+                                    Button(
+                                        enabled = CustomSingleton.selectedStore!!.app != null,
+                                        onClick = {
                                         gotoStoreNotifications()
-                                    },Modifier.fillMaxWidth().padding(8.dp)) {
+                                    },
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                                         Text("الاشعارات")
-                                    }
-                                    Button(onClick = {
-//                                        SelectedStore.store.value = CustomSingleton.selectedStore!!
-//                                        gotoStoreDeliveryMen()
-                                    },Modifier.fillMaxWidth().padding(8.dp)) {
-                                        Text("الاعلانات")
                                     }
                                 }
                                 item {
                                     Button(onClick = {
                                         SelectedStore.store.value = CustomSingleton.selectedStore!!
-                                        gotoStoreSettings(CustomSingleton.selectedStore!!)
+                                        gotoStoreSettings()
                                     },Modifier.fillMaxWidth().padding(8.dp)) {
                                         Text("اعدادات المتجر")
                                     }
                                 }
+                            }
+                            else if(CustomSingleton.stores.isEmpty()){
+                                item {
+                                    Text("أنشئ متجرك الالكتروني وابدأ في تحقيق ارباحك")
+                                    Button(
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                        onClick = {
+                                        isShowAddCatgory.value = true
+                                    }) {
+                                        Text("اضافة متجر جديد")
+                                    }
+                                }
+
                             }
                         }
                         if (isShowAddCatgory.value) modalAddMyCategory()
@@ -215,87 +212,117 @@ class StoresActivity : ComponentActivity() {
                     .fillMaxSize()
                     .padding(bottom = 10.dp)
             ){
+                var storeName by remember { mutableStateOf("") }
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Top
                 ) {
-                    item {
-                        var storeName by remember { mutableStateOf("") }
-                        Card(Modifier.padding(8.dp)){
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ){
-                                OutlinedTextField(
-                                    modifier = Modifier.padding(8.dp),
-                                    value = storeName,
-                                    onValueChange = {
-                                        storeName = it
-                                    }
-                                )
-                                IconButton(onClick = {
-                                    addStore(storeName)
-//                                    addCategory(categoryName,{
-//                                        categoryName = ""
-//                                        categories.value += it
-//                                    })
 
-                                }) {
-                                    Icon(
-                                        modifier =
-                                        Modifier
-                                            .border(
-                                                1.dp,
-                                                MaterialTheme.colorScheme.primary,
-                                                RoundedCornerShape(
-                                                    16.dp
-                                                )
-                                            )
-                                            .clip(
-                                                RoundedCornerShape(
-                                                    16.dp
-                                                )
-                                            ),
-                                        imageVector = Icons.Outlined.Add,
-                                        contentDescription = ""
-                                    )
-                                }
+                    item {
+                    CustomCard2(modifierBox =  Modifier) {
+                        OutlinedTextField(
+                            modifier = Modifier.padding(8.dp),
+                            value = storeName,
+                            onValueChange = {
+                                storeName = it
+                            },
+                            label = {
+                                Text("اسم المتجر")
                             }
-                        }
-                    }
-
-                    item {
+                        )
+                        Text("شعار المتجر", modifier = Modifier.padding(12.dp) )
                         Card(
-                            Modifier
-                                .size(50.dp)
-                                .clickable {
-                                    getContentlogo.launch("image/*")
-                                }) {
-                            if (uriLogo.value != null){
+                                Modifier
+                                    .size(100.dp)
+                                    .padding(8.dp)
+                                    .clickable {
+                                        getContentlogo.launch("image/*")
+                                    }) {
+//                            if (){
+                            if (uriLogo.value != null)
+                            CustomImageViewUri(
+                                modifier =  Modifier.fillParentMaxSize(),
+                                imageUrl =  uriLogo.value!!,
+                                contentScale = ContentScale.Inside
+                            )else{
                                 CustomImageViewUri(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    imageUrl = uriLogo.value!!,
+                                    imageUrl =  R.drawable.baseline_add_card_24,
+                                    contentScale = ContentScale.Crop
                                 )
                             }
+//                            }
                         }
-                    }
 
-                    item {
+                        Text("صورة غلاف المتجر", modifier = Modifier.padding(12.dp) )
                         Card(
                             Modifier
                                 .fillMaxWidth()
-                                .height(100.dp)
+                                .height(200.dp)
+                                .padding(8.dp)
                                 .clickable {
                                     getContentCover.launch("image/*")
                                 }) {
+
                             if (uriCover.value != null){
                                 CustomImageViewUri(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    imageUrl = uriCover.value!!,
+                                    modifier =  Modifier.fillParentMaxSize(),
+                                    imageUrl =  uriCover.value!! ,
+                                contentScale = ContentScale.Inside
+                                )
+                            }else{
+                                CustomImageViewUri(
+                                    imageUrl =  R.drawable.baseline_add_card_24,
+                                contentScale = ContentScale.Crop
                                 )
                             }
+
+//
                         }
+
+                        val radioOptions = listOf(
+                            CustomOption(1,"متجر مشترك"),
+                            CustomOption(2,"متجر مخصص"),
+                        )
+                        var selectedOption by remember { mutableStateOf<CustomOption?>(null) }
+
+                        Text("نوع المتجر", modifier = Modifier.padding(14.dp))
+                        radioOptions.forEach { text ->
+                            Row(
+                                Modifier.fillMaxWidth().height(56.dp)
+                                    .selectable(
+                                        selected = (text == selectedOption),
+                                        onClick = {
+                                            selectedOption = text
+//                                    if (selectedOption.id == 2 ){
+////                                        selectedLocation = null
+//                                    }
+//
+//                                    onOptionSelected(text)
+
+                                        },
+                                        role = Role.RadioButton
+                                    ).padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            )
+                            {
+                                RadioButton(selected = (text == selectedOption), onClick = null)
+                                Text(text = text.name,style = MaterialTheme. typography. bodyLarge,modifier = Modifier. padding(start = 16.dp))
+                            }
+                        }
+
+                        Button(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            enabled = storeName.length > 5 && uriLogo.value != null && uriCover.value != null && selectedOption != null ,
+                            onClick = {
+                                addStore(storeName,selectedOption!!.id.toString())
+                            }) {
+                            Text("اضافة")
+                        }
+
                     }
+                    }
+
+
 
                 }
             }
@@ -484,7 +511,7 @@ class StoresActivity : ComponentActivity() {
             stateController.successState()
         }
     }
-    private fun addStore(name: String) {
+    private fun addStore(name: String,storeTypeId:String) {
         stateController.startAud()
 
         val requestBodyIcon = object : RequestBody() {
@@ -523,7 +550,7 @@ class StoresActivity : ComponentActivity() {
 
 
         val body = builderForm3()
-            .addFormDataPart("typeId","2")
+            .addFormDataPart("typeId",storeTypeId)
             .addFormDataPart("name",name)
             .addFormDataPart("logo", "file1.jpg", requestBodyIcon)
             .addFormDataPart("cover", "file2.jpg", requestBodyCover)
@@ -536,6 +563,7 @@ class StoresActivity : ComponentActivity() {
             val result: Store =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
 
             CustomSingleton.stores += result
+            CustomSingleton.selectedStore = result
 //            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
             isShowAddCatgory.value = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")
@@ -655,11 +683,8 @@ class StoresActivity : ComponentActivity() {
         )
         startActivity(intent)
     }
-    private fun gotoStorePosts() {
-        val intent = Intent(
-            this,
-            StoreOrdersActivity::class.java
-        )
+    private fun gotoStoreAds() {
+        val intent = Intent(this, AdsActivity::class.java)
         startActivity(intent)
     }
     private fun gotoStoreNotifications() {
@@ -676,17 +701,12 @@ class StoresActivity : ComponentActivity() {
         )
         startActivity(intent)
     }
-    private fun gotoStoreSettings(store: Store) {
+    private fun gotoStoreSettings() {
         val intent = Intent(
             this,
             SettingsStoreActivity::class.java
         )
-        intent.putExtra("store", MyJson.MyJson.encodeToString(store))
-//        val intent =
-//            Intent(this, SettingsStoreActivity::class.java)
-//        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
         startActivity(intent)
-//        finish()
     }
     private fun goToStore(store: Store) {
         val intent = Intent(
@@ -707,4 +727,40 @@ class StoresActivity : ComponentActivity() {
                 uriCover.value = uri
             }
         }
+
+    ///
+    private fun mainInit() {
+        if (!requestServer.serverConfig.isSetSubscribeApp()) {
+            subscribeToAppTopic()
+        }
+        if (!requestServer.serverConfig.isSetRemoteConfig()) {
+            stateController.startRead()
+            requestServer.initVarConfig({
+                stateController.errorStateRead("enable get remote config")
+            }) {
+                CustomSingleton.remoteConfig = requestServer.serverConfig.getRemoteConfig()
+                checkTokenToRead()
+            }
+        } else {
+            CustomSingleton.remoteConfig = requestServer.serverConfig.getRemoteConfig()
+            checkTokenToRead()
+        }
+    }
+    private fun subscribeToAppTopic() {
+        val appId = "1"
+        Firebase.messaging.subscribeToTopic(appId)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    requestServer.serverConfig.setSubscribeApp(appId)
+                    Log.e("subsecribed",appId)
+                }
+            }
+    }
+    private fun checkTokenToRead() {
+        if (!AToken().isSetAccessToken()) {
+            gotoLogin()
+        } else {
+            read()
+        }
+    }
 }

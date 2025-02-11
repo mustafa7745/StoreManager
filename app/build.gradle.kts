@@ -75,9 +75,11 @@ dependencies {
     implementation (libs.android.maps.utils)
 
     val room_version = "2.6.1"
+//    implementation("com.github.arpitkatiyar1999:Country-Picker:1.3.0")
 
+//    implementation("com.eygraber:compose-country-code-picker:0.5.1")
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
-    implementation(libs.firebase.admin)
+//    implementation(libs.firebase.admin)
 
 }

@@ -22,7 +22,7 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCnwhwO-jKSK8zcbcfeVFPKE0S4F4Y1m-Q" />
         <activity
-            android:name=".activities.LoginActivity"
+            android:name=".activities.StoresActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
@@ -38,7 +38,8 @@
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".activities.StoresActivity"
+            android:name=".activities.LoginActivity"
+            android:windowSoftInputMode="adjustResize"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
@@ -74,6 +75,9 @@
             android:exported="false"/>
         <activity
             android:name=".activities.SettingsActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".activities.AdsActivity"
             android:exported="false"/>
         <activity
             android:name=".activities.StoreNotificationsActivity"

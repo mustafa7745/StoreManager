@@ -226,6 +226,7 @@ class StoreNotificationsActivity : ComponentActivity() {
     private fun addNotification(title:String,description:String) {
         stateController.startAud()
         val body = builderForm3()
+            .addFormDataPart("appId",CustomSingleton.selectedStore!!.app!!.id.toString())
             .addFormDataPart("title",title)
             .addFormDataPart("description",description)
             .build()

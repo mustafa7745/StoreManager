@@ -1,11 +1,15 @@
 package com.fekraplatform.storemanger.activities
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,13 +22,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,16 +45,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.shared.AToken
 import com.fekraplatform.storemanger.shared.AppInfoMethod
+import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.MainCompose2
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -58,27 +75,63 @@ import kotlinx.coroutines.launch
 class LoginActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
-    val password = mutableStateOf("")
-    val phone = mutableStateOf("")
-    val appInfoMethod = AppInfoMethod()
-    val aToken = AToken()
-    lateinit var varRemoteConfig:VarRemoteConfig
+    private var countryList = listOf(
+        Country("اليمن", "Yemen", "967"),
+        Country("السعودية", "Saudi Arabia", "966"),
+        Country("مصر", "Egypt", "20"),
+        Country("الكويت", "Kuwait", "965"),
+        Country("البحرين", "Bahrain", "973"),
+        Country("عمان", "Oman", "968"),
+        Country("الأردن", "Jordan", "962"),
+        Country("لبنان", "Lebanon", "961"),
+        Country("العراق", "Iraq", "964"),
+        Country("سوريا", "Syria", "963"),
+        Country("فلسطين", "Palestine", "970"),
+        Country("دولة الإمارات", "United Arab Emirates", "971"),
+        Country("قطر", "Qatar", "974"),
+        Country("الولايات المتحدة", "United States", "1"),
+        Country("كندا", "Canada", "1"),
+        Country("المملكة المتحدة", "United Kingdom", "44"),
+        Country("أستراليا", "Australia", "61"),
+        Country("الهند", "India", "91"),
+        Country("ألمانيا", "Germany", "49"),
+        Country("فرنسا", "France", "33"),
+        Country("البرازيل", "Brazil", "55"),
+        Country("المكسيك", "Mexico", "52"),
+        Country("اليابان", "Japan", "81"),
+        Country("الصين", "China", "86"),
+        Country("روسيا", "Russia", "7"),
+        Country("إيطاليا", "Italy", "39"),
+        Country("إسبانيا", "Spain", "34"),
+        Country("كوريا الجنوبية", "South Korea", "82"),
+        Country("تركيا", "Turkey", "90"),
+        Country("الأرجنتين", "Argentina", "54"),
+        Country("جنوب أفريقيا", "South Africa", "27"),
+        Country("كولومبيا", "Colombia", "57"),
+        Country("السويد", "Sweden", "46"),
+        Country("سويسرا", "Switzerland", "41"),
+        Country("البرتغال", "Portugal", "351"),
+        Country("النمسا", "Austria", "43"),
+        Country("اليونان", "Greece", "30"),
+        Country("نيوزيلندا", "New Zealand", "64"),
+
+
+    )
+    var selectedCountryCode by mutableStateOf(countryList.first())
+    var isShowSelecetCountryCode by mutableStateOf(false)
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        CustomSingleton.remoteConfig = requestServer.serverConfig.getRemoteConfig()
-        Log.e("subsecribed??",requestServer.serverConfig.getSubscribeApp())
-        if (!requestServer.serverConfig.isSetSubscribeApp())
-            subscribeToAppTobic()
-        if (aToken.isSetAccessToken()){
-            gotoDashboard()
-        }
 
+        enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
                 MainCompose2(
                     0.dp, stateController, this,
-
                 ) {
+                    var password by remember { mutableStateOf("") }
+                    var phone by remember { mutableStateOf("") }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -110,39 +163,41 @@ class LoginActivity : ComponentActivity() {
                                 )
 
 
-                                var isValidPhone by remember { mutableStateOf(true) }
-                                if (!isValidPhone && phone.value.length>8) {
-                                    Text(
-                                        fontSize = 10.sp,
-                                        text = "الرجاء إدخال رقم هاتف صحيح (يجب أن يتكون من 9 أرقام ويبدأ بـ 70, 71, 73, 77, أو 78)",
-                                        color = Color.Red,
-                                        modifier = Modifier.padding(start = 10.dp)
+
+                                CompositionLocalProvider(LocalTextStyle provides TextStyle(textDirection = TextDirection.Ltr)){
+                                    OutlinedTextField(
+//                                    textDirection = TextDirection.Ltr,
+                                                value = phone,
+                                        onValueChange = {
+                                            phone = it
+//                                        isValidPhone = it.matches(Regex("^7[0|1|3|7|8][0-9]{7}$"))
+                                        },
+
+                                        label = { Text(text = "رقم الهاتف") },
+                                        trailingIcon = {
+                                            Row (
+                                                verticalAlignment = Alignment.CenterVertically,
+                                               modifier =  Modifier.padding(4.dp).clickable {
+                                                isShowSelecetCountryCode = true
+                                            }){
+
+//                                                VerticalDivider(Modifier.padding(8.dp))
+                                                Text("+"+selectedCountryCode.code )
+                                                Icon(Icons.Default.ArrowDropDown, contentDescription = "choose country")
+                                            }
+
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 16.dp),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                                     )
                                 }
-                                // Phone Number Field
+
                                 OutlinedTextField(
-                                    value = phone.value,
+                                    value = password,
                                     onValueChange = {
-                                        phone.value = it
-                                        isValidPhone = it.matches(Regex("^7[0|1|3|7|8][0-9]{7}$"))
-                                    },
-                                    label = { Text(text = "رقم الهاتف") },
-                                    suffix = {
-                                        Icon(
-                                            modifier = Modifier.padding(5.dp),
-                                            imageVector = Icons.Outlined.Phone,
-                                            contentDescription = "",
-                                        )
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                                )
-                                OutlinedTextField(
-                                    value = password.value,
-                                    onValueChange = {
-                                        password.value = it
+                                        password = it
                                                     },
                                     label = { Text(text = "الرقم السري") },
                                     suffix = {
@@ -158,9 +213,7 @@ class LoginActivity : ComponentActivity() {
                                     visualTransformation = PasswordVisualTransformation()
                                 )
                                 Column (
-
                                     horizontalAlignment = Alignment.CenterHorizontally,
-
                                     verticalArrangement = Arrangement.Center
                                 ){
                                     Button(
@@ -174,20 +227,11 @@ class LoginActivity : ComponentActivity() {
                                                 }else{
                                                     // Get new token
                                                     val token = task.result
-                                                    login(token)
+                                                    login(token,phone,password)
                                                     Log.d("FCM Token", "Token: $token")
                                                 }
                                             }
-                                            lifecycleScope.launch {
-                                                appInfoMethod.getAppToken(
-                                                    {
-
-                                                    },{
-
-                                                    })
-                                            }
                                         },
-//                                        enabled = isValidPhone  && password.value.length in 4..8 && isInit.value,
                                         modifier = Modifier
                                             .padding(5.dp)
                                             .fillMaxWidth()
@@ -216,6 +260,7 @@ class LoginActivity : ComponentActivity() {
                                         color = Color.Blue,
                                         fontSize = 14.sp,
                                         modifier = Modifier.clickable {
+                                            intentFunWhatsapp("اشتراك")
 //                                            showDialog.value = true
                                         }
                                     )
@@ -227,6 +272,7 @@ class LoginActivity : ComponentActivity() {
                                     modifier = Modifier
                                         .padding(20.dp)
                                         .clickable {
+                                            intentFunWhatsapp("نسيت كلمة المرور")
 //                                            showDialogResetPassword.value = true
 //                                intentFunWhatsappForgetPassword()
                                         }
@@ -276,43 +322,86 @@ class LoginActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.height(80.dp))
 //                            CopyrightText()
                         }
+
                     }
+                    if (isShowSelecetCountryCode){ DialogCountryCodes()}
                 }
             }
         }
     }
 
-    private fun subscribeToAppTobic() {
-        Log.e("start","app_1")
-        Firebase.messaging.subscribeToTopic("app_1")
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                requestServer.serverConfig.setSubscribeApp("1")
-                    Log.e("subsecribed","app_1")
+    @Composable
+    private fun DialogCountryCodes() {
+        Dialog(onDismissRequest = { isShowSelecetCountryCode = false }) {
+
+            LazyColumn(
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .background(Color.White)) {
+                itemsIndexed(countryList) { index, item ->
+                    CustomCard2(modifierBox = Modifier.clickable {
+                        selectedCountryCode = item
+                        isShowSelecetCountryCode = false
+                    }) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)) {
+                            Text(item.nameAr + " " + item.code + "+")
+                        }
+                    }
+
+
+                    HorizontalDivider(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp))
                 }
             }
+        }
     }
     private fun gotoDashboard() {
-        val intent =
-            Intent(this, StoresActivity::class.java)
+        val intent = Intent(this, StoresActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
         startActivity(intent)
         finish()
     }
-    private fun login(token:String) {
-        Log.e("4535","app_1")
+    private fun login(token:String,phone:String,password:String) {
         stateController.startAud()
         val body = builderForm(token)
-            .addFormDataPart("phone",phone.value.toString())
-            .addFormDataPart("password",password.value.toString())
+            .addFormDataPart("countryCode", selectedCountryCode.code)
+            .addFormDataPart("phone",phone)
+            .addFormDataPart("password",password)
             .build()
 
         requestServer.request2(body,"login",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
-           aToken.setAccessToken(it)
+           AToken().setAccessToken(it)
            gotoDashboard()
         }
     }
+    private fun intentFunWhatsapp(message: String): Boolean {
+        val formattedNumber = "967781874077"
+        // Create the URI for the WhatsApp link
+        val uri =
+            "https://api.whatsapp.com/send?phone=$formattedNumber&text=${Uri.encode(message)}"
+
+        // Create an Intent to open the WhatsApp application
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = Uri.parse(uri)
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+        try {
+            startActivity(intent)
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "يجب تثبيت الواتس اولا", Toast.LENGTH_LONG).show()
+            return false
+        }
+    }
+    data class Country(val nameAr: String, val nameEn: String, val code: String)
 }

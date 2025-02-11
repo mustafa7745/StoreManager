@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.room.Room
 import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.models.Currency
+import com.fekraplatform.storemanger.models.CustomPrice
 import com.fekraplatform.storemanger.models.StoreCategory
 import com.fekraplatform.storemanger.models.Option
 import com.fekraplatform.storemanger.models.Product2
@@ -74,9 +76,11 @@ import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
+import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
+import com.fekraplatform.storemanger.shared.StoredCustomPrice
 import com.fekraplatform.storemanger.shared.StoredProducts
 import com.fekraplatform.storemanger.shared.U1R
 import com.fekraplatform.storemanger.shared.builderForm3
@@ -110,6 +114,7 @@ class ProductsActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
     private val productViews = mutableStateOf<List<ProductView>>(listOf())
     private var nativeProductViews by mutableStateOf<List<NativeProductView>>(listOf())
+    private var customPrices by mutableStateOf<List<CustomPrice>?>(null)
     private val storeCategories = mutableStateOf<List<StoreCategory>>(listOf())
 
     var isShowChooseProductView by mutableStateOf(false)
@@ -144,7 +149,9 @@ class ProductsActivity : ComponentActivity() {
     val isShowAddCatgory = mutableStateOf(false)
     var isShowUpdateProductOrder by mutableStateOf(false)
     var isShowChooseCurrencies by mutableStateOf(false)
+    var isShowCustomPrice by mutableStateOf(false)
     val isShowChooseOptionAndPrice = mutableStateOf(false)
+     var isAdd:Boolean = true
 
     lateinit var storeId: String
 
@@ -218,6 +225,19 @@ class ProductsActivity : ComponentActivity() {
                     var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
                     var offsetY by remember { mutableStateOf(0f) }
                     LazyColumn(Modifier.fillMaxSize()) {
+
+                        stickyHeader {
+                            MyHeader({
+                                finish()
+                            },{
+                                if (!CustomSingleton.isSharedStore())
+                                CustomIcon(Icons.Default.Add,true) {
+                                    isShowAddCatgory.value = true
+                                }
+                            }) {
+                                Text("المنتجات")
+                            }
+                        }
 
                         item {
                             SingletonStoreConfig.EditModeCompose()
@@ -425,6 +445,21 @@ class ProductsActivity : ComponentActivity() {
                                                     }
 
                                                 })
+                                                if (CustomSingleton.isSharedStore()){
+                                                    if (productOption.isCustomPrice)
+                                                        CustomIcon(Icons.Default.Edit) {
+
+                                                            selectedProductOption = productOption
+                                                            isAdd = false
+                                                            isShowCustomPrice = true
+                                                        }
+                                                    else
+                                                        CustomIcon(Icons.Default.Add) {
+                                                            selectedProductOption = productOption
+                                                            isAdd = true
+                                                            isShowCustomPrice = true
+                                                        }
+                                                }
                                                 Text(formatPrice(productOption.price), Modifier.clickable {
                                                     if (!CustomSingleton.isSharedStore()) {
                                                         selectedProductOption = productOption
@@ -579,25 +614,25 @@ class ProductsActivity : ComponentActivity() {
                             }
                         }
 
-                        if (!CustomSingleton.isSharedStore())
-                            item {
-                                Card(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(100.dp)
-                                        .padding(8.dp)
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .fillMaxSize()
-                                            .clickable {
-                                                isShowAddCatgory.value = true
-                                            }
-                                    ) {
-                                        Text("+", modifier = Modifier.align(Alignment.Center))
-                                    }
-                                }
-                            }
+//                        if (!CustomSingleton.isSharedStore())
+//                            item {
+//                                Card(
+//                                    Modifier
+//                                        .fillMaxWidth()
+//                                        .height(100.dp)
+//                                        .padding(8.dp)
+//                                ) {
+//                                    Box(
+//                                        Modifier
+//                                            .fillMaxSize()
+//                                            .clickable {
+//                                                isShowAddCatgory.value = true
+//                                            }
+//                                    ) {
+//                                        Text("+", modifier = Modifier.align(Alignment.Center))
+//                                    }
+//                                }
+//                            }
 //                            Column {
 //
 //                            }
@@ -615,6 +650,7 @@ class ProductsActivity : ComponentActivity() {
                     if (isShowChooseProductView) modalChooseProductView()
                     if (isShowUpdateProductOrder) modalUpdateProductOrder()
                     if (isShowChooseCurrencies) modalChooseCurrencies()
+                    if(isShowCustomPrice)modalCustomPrice()
                 }
             }
         }
@@ -627,36 +663,62 @@ class ProductsActivity : ComponentActivity() {
             val diff = Duration.between(s.storeAt, getCurrentDate()).toSeconds()
             if (diff <= 30) {
                 productViews.value = s.productViews
-                ///
-//                if (CustomSingleton.isSharedStore()){
-//                    productViews.value = productViews.value.map { view->
-//                        val newProductsStore = view.products.map {  product->
-//                            val newOptions = product.options.filterNot { it.storeProductId in CustomSingleton.selectedStore!!.storeConfig!!.products }
-//                            product.copy(options = newOptions)
-//                        }
-//                        view.copy(products = newProductsStore)
-//                    }
-//                }
-                if (CustomSingleton.isSharedStore() && !SingletonHome.isEditMode.value) {
-                    productViews.value = productViews.value.map { productView ->
-                        var newProducts = productView.products.map { product ->
-                            val newOptions = product.options.filterNot { option ->
-                                option.storeProductId in CustomSingleton.selectedStore!!.storeConfig!!.products
+                //
+                if (CustomSingleton.isSharedStore()){
+                    readCustomPrices(onFail = {
+                        stateController.errorStateRead(it)
+                    }){
+                        customPrices = it
+                        processCustomPrices()
+                        if (!SingletonHome.isEditMode.value){
+                            productViews.value = productViews.value.map { productView ->
+                                var newProducts = productView.products.map { product ->
+                                    val newOptions = product.options.filterNot { option ->
+                                        option.storeProductId in CustomSingleton.selectedStore!!.storeConfig!!.products
+                                    }
+                                    product.copy(options = newOptions)
+                                }
+                                productView.copy(products = newProducts.filterNot { it.options.isEmpty() })
                             }
-                            product.copy(options = newOptions)
                         }
-                        productView.copy(products = newProducts.filterNot { it.options.isEmpty() })
+                        stateController.successState()
                     }
+                }else{
+                    stateController.successState()
                 }
 
-                stateController.successState()
             } else read {
                 updateStoredProducts()
+                processCustomPrices()
             }
         } else
             read {
                 CustomSingleton.storedProducts += storedProducts()
+                processCustomPrices()
             }
+    }
+
+    private fun processCustomPrices() {
+        if (customPrices != null) {
+            productViews.value = productViews.value.map { view ->
+                val products = view.products.map { product ->
+                    // Update the products of each store product
+                    val updatedOptions = product.options.map { option ->
+//                        Log.e("ffff2334",customPrice.toString())
+                        val customPrice =
+                            customPrices!!.find { it.storeProductId == option.storeProductId }
+                        if (customPrice != null) {
+                            Log.e("ffff",customPrice.toString())
+                            option.copy(price = customPrice.price, isCustomPrice = true)
+                        } else {
+                            option
+                        }
+                    }
+                    product.copy(options = updatedOptions)
+                }
+                view.copy(products = products)
+            }
+        }
     }
 
     private fun updateStoredProducts() {
@@ -757,23 +819,23 @@ class ProductsActivity : ComponentActivity() {
 
             }
 
-            result = result.map { r ->
-                if (r.product.productId == storeProduct.productId) {
-                    var newOption = r.options
-                    newOption += ProductOption(
-                        storeProduct.optionId,
-                        Currency(
-                            storeProduct.currencyId,
-                            storeProduct.currencyName,
-                            storeProduct.currencySign
-                        ), storeProduct.id, storeProduct.optionName, storeProduct.price.toString()
-
-                    )
-                    r.copy(options = newOption)
-                } else
-                    r
-
-            }.toMutableList()
+//            result = result.map { r ->
+//                if (r.product.productId == storeProduct.productId) {
+//                    var newOption = r.options
+//                    newOption += ProductOption(
+//                        storeProduct.optionId,
+//                        Currency(
+//                            storeProduct.currencyId,
+//                            storeProduct.currencyName,
+//                            storeProduct.currencySign
+//                        ), storeProduct.id, storeProduct.optionName, storeProduct.price.toString(),
+//
+//                    )
+//                    r.copy(options = newOption)
+//                } else
+//                    r
+//
+//            }.toMutableList()
 
         }
         return result
@@ -883,8 +945,18 @@ class ProductsActivity : ComponentActivity() {
                 productViews.value = result
             }
 
-            onDone()
-            stateController.successState()
+            if (CustomSingleton.isSharedStore()){
+                readCustomPrices({
+                    stateController.errorStateRead(it)
+                }){
+                    customPrices = it
+                    onDone()
+                    stateController.successState()
+                }
+            }else{
+                onDone()
+                stateController.successState()
+            }
         }
     }
 
@@ -1581,6 +1653,48 @@ class ProductsActivity : ComponentActivity() {
             }
         }
     }
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun modalCustomPrice() {
+        var value by remember { mutableStateOf("") }
+
+        ModalBottomSheet(
+            onDismissRequest = { isShowUpdateText.value = false }) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 10.dp)
+            ) {
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (SELECTED_UPDATE != UPDATE_OPTION_NAME)
+
+                        item {
+                            TextField(value = value, onValueChange = {
+                                value = it
+                            })
+                            Button(onClick = {
+                                processCustomPrice(value)
+                            }) {
+                                Text("حفظ")
+                            }
+                        }
+                    if (SELECTED_UPDATE == UPDATE_OPTION_NAME)
+                        itemsIndexed(options.value) { index: Int, item: Option ->
+                            Button(
+                                onClick = {
+                                    updateProductOptionName(item.id.toString())
+                                }
+                            ) { Text(item.name) }
+                        }
+
+                }
+            }
+        }
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -2061,8 +2175,8 @@ class ProductsActivity : ComponentActivity() {
     fun updateProductName(value: String) {
         stateController.startAud()
         //
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
+        val body = builderForm3()
+            .addFormDataPart("storeId",CustomSingleton.selectedStore!!.id.toString())
             .addFormDataPart("productId",selectedStoreProduct.product.productId.toString())
             .addFormDataPart("productName", value)
             .build()
@@ -2084,6 +2198,46 @@ class ProductsActivity : ComponentActivity() {
             isShowUpdateText.value = false
             stateController.successStateAUD("تم التحديث بنجاح")
             updateStoredProducts()
+        }
+    }
+    fun processCustomPrice(price: String) {
+        stateController.startAud()
+        //
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+
+            .addFormDataPart("storeId",CustomSingleton.selectedStore!!.id.toString())
+            .addFormDataPart("storeProductId",selectedProductOption.storeProductId.toString())
+            .addFormDataPart("price", price)
+            .build()
+
+        requestServer.request2(body, if (isAdd)"addCustomPrice" else "updateCustomPrice", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { it ->
+
+            productViews.value = productViews.value.map { view ->
+                val products = view.products.map { product ->
+                    // Update the products of each store product
+                    val updatedOptions = product.options.map { option ->
+                        if (selectedProductOption.optionId == option.optionId) {
+                            option.copy(price = price, isCustomPrice = true)
+                        } else {
+                            option
+                        }
+                    }
+                    product.copy(options = updatedOptions)
+                }
+                view.copy(products = products)
+            }
+
+            readCustomPrices(forced = true, onFail = {
+                stateController.errorStateRead(it)
+            }){
+                stateController.successStateAUD("تم التحديث بنجاح")
+                isShowCustomPrice = false
+                stateController.successState()
+            }
         }
     }
 
@@ -2488,7 +2642,6 @@ class ProductsActivity : ComponentActivity() {
                         data
                     )
 
-                stateController.successStateAUD()
             }
         }
 
@@ -2831,6 +2984,44 @@ class ProductsActivity : ComponentActivity() {
             onSuccess(result)
             stateController.successStateAUD()
         }
+    }
+
+    fun readCustomPrices(onFail: (data: String) -> Unit,forced:Boolean = false ,onSuccess: (data: List<CustomPrice>) -> Unit){
+        val customPrice = CustomSingleton.storedCustomPrices.find { it.storeId == CustomSingleton.getOriginalStoreId() }
+        if (!forced && customPrice != null && Duration.between(customPrice.storeAt, getCurrentDate()).toSeconds() <= 30){
+            onSuccess(customPrice.customPrices)
+        }else{
+            stateController.startRead()
+            val body = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("storeId",CustomSingleton.getOriginalStoreId().toString())
+                .build()
+
+            requestServer.request2(body,"getCustomPrices",{code,fail->
+                onFail(fail)
+            }
+            ){data->
+                val result:List<CustomPrice> =
+                    MyJson.IgnoreUnknownKeys.decodeFromString(
+                        data
+                    )
+                val newStoredPrices = StoredCustomPrice(CustomSingleton.getOriginalStoreId(),result,
+                    getCurrentDate()
+                )
+                if (customPrice == null){
+                    CustomSingleton.storedCustomPrices += newStoredPrices
+                }
+                CustomSingleton.storedCustomPrices = CustomSingleton.storedCustomPrices.map {
+                    if (it.storeId == CustomSingleton.getOriginalStoreId()){
+                        it.copy(customPrices = result)
+                    }
+                    else
+                    it
+                }
+                onSuccess(result)
+            }
+        }
+
     }
 }
 @Serializable

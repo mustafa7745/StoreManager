@@ -6,8 +6,11 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +19,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -39,15 +44,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.models.NestedSection
 import com.fekraplatform.storemanger.models.Section
 import com.fekraplatform.storemanger.models.StoreNestedSection
 import com.fekraplatform.storemanger.models.StoreSection
+import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
+import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
@@ -62,8 +70,10 @@ class StoreNestedSectionsActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
     val isShowAddSection = mutableStateOf(false)
+    var selectMode by mutableStateOf(false)
 
     lateinit var storeSection: StoreSection
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val intent = intent
@@ -90,16 +100,31 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                     ) {
                         var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
 
-                        IconDelete(ids) {
-                            deleteStoreNestedSections(ids){
-                                SingletonHome.home.value!!.storeNestedSections.forEach {
-                                    if (it.id in ids)
-                                        SingletonHome.home.value!!.storeNestedSections -= it
+
+
+                        LazyColumn (Modifier.safeDrawingPadding()){
+                            stickyHeader {
+                                MyHeader({
+                                    finish()
+                                },{
+                                    if (!CustomSingleton.isSharedStore()){
+                                        IconDelete(ids) {
+                                            deleteStoreNestedSections(ids){
+                                                SingletonHome.home.value!!.storeNestedSections.forEach {
+                                                    if (it.id in ids)
+                                                        SingletonHome.home.value!!.storeNestedSections -= it
+                                                }
+                                            }
+                                        }
+                                        CustomIcon(Icons.Default.Add,true) {
+                                            isShowAddSection.value = true
+                                        }
+                                    }
+
+                                }) {
+                                    Text("الاقسام الداخلية")
                                 }
                             }
-                        }
-
-                        LazyColumn {
                             item {
                                 SingletonStoreConfig.EditModeCompose()
                             }
@@ -119,12 +144,19 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                                     Box (
                                         Modifier
                                             .fillMaxSize()
-                                            .clickable {
-                                                if (! SingletonHome.nestedSection.value.any { it == storeNestedSection.id })    goToProduct(storeNestedSection)
-                                            }
+                                            .combinedClickable (
+                                                onClick = {
+                                                    if (! SingletonHome.nestedSection.value.any { it == storeNestedSection.id })    goToProduct(storeNestedSection)
+
+                                                },
+                                                onLongClick = {
+                                                    selectMode = !selectMode
+                                                }
+                                                )
+
                                     ){
                                         Text(storeNestedSection.nestedSectionName,Modifier.align(Alignment.Center))
-                                        if (!CustomSingleton.isSharedStore())
+                                        if (!CustomSingleton.isSharedStore() && selectMode)
                                         Checkbox(
                                             modifier = Modifier.align(Alignment.CenterStart),
                                             checked = ids.find { it == storeNestedSection.id } != null, onCheckedChange = {
@@ -185,25 +217,25 @@ class StoreNestedSectionsActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                            if (!CustomSingleton.isSharedStore())
-                            item {
-                                Card(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(100.dp)
-                                        .padding(8.dp)
-                                ) {
-                                    Box (
-                                        Modifier
-                                            .fillMaxSize()
-                                            .clickable {
-                                                isShowAddSection.value = true
-                                            }
-                                    ){
-                                        Text("+", modifier = Modifier.align(Alignment.Center))
-                                    }
-                                }
-                            }
+//                            if (!CustomSingleton.isSharedStore())
+//                            item {
+//                                Card(
+//                                    Modifier
+//                                        .fillMaxWidth()
+//                                        .height(100.dp)
+//                                        .padding(8.dp)
+//                                ) {
+//                                    Box (
+//                                        Modifier
+//                                            .fillMaxSize()
+//                                            .clickable {
+//                                                isShowAddSection.value = true
+//                                            }
+//                                    ){
+//                                        Text("+", modifier = Modifier.align(Alignment.Center))
+//                                    }
+//                                }
+//                            }
                         }
                         if (isShowAddSection.value) modalAddMyCategory()
 

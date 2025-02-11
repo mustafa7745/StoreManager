@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,15 +50,21 @@ import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.Singlton.SelectedStore
+import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.shared.CustomCard2
+import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.CustomSingleton
+import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose2
+import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.VarRemoteConfig
 import com.fekraplatform.storemanger.shared.builderForm
+import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
@@ -67,6 +76,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.time.Duration
+import java.time.LocalDateTime
 
 
 class SettingsStoreActivity : ComponentActivity() {
@@ -77,6 +88,7 @@ class SettingsStoreActivity : ComponentActivity() {
 
     var file by mutableStateOf<String?>(null)
 
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SingletonHome.setStateController1(stateController)
@@ -95,6 +107,7 @@ class SettingsStoreActivity : ComponentActivity() {
 //            finish()
 //        }
 
+        enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
                 MainCompose2(
@@ -108,6 +121,14 @@ class SettingsStoreActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ){
+                        stickyHeader {
+                            MyHeader({
+                                finish()
+                            }) {
+                                Text("اعدادات المتجر")
+                            }
+                        }
+
                         item {
                             CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
 
@@ -119,47 +140,152 @@ class SettingsStoreActivity : ComponentActivity() {
 
                                         gotoStoreLocation()
                                     }) {
-                                        Text(if (SelectedStore.store.value!!.latLng != null) "edit" else "add")
+                                        Text(if (SelectedStore.store.value!!.latLng != null) "تعديل" else "اضافة")
                                     }
                                 }
                             }
                         }
-                        if (CustomSingleton.selectedStore!!.app != null){
 
+                        item {
+                            CustomCard2( modifierBox = Modifier.fillMaxSize().clickable {
 
-                            item {
-                                LaunchedEffect(null) {
-                                readFileFromCache()
-                            }
-                                CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
-
-                                }) {
-
-                                    CustomRow {
-                                        Text("اعدادات الخدمة",Modifier.padding(8.dp))
-
+                            }) {
+                                CustomRow {
+                                    Text("نوع الاشتراك",Modifier.padding(8.dp))
+                                    if(CustomSingleton.isPremiumStore()){
+                                        Text( "Premium",Modifier.padding(8.dp))
+                                    }else{
                                         Button(onClick = {
-                                            if (file == null){
-                                                getContentFile.launch("application/json")
-                                            }else{
-                                                saveFileToCache()
+
+                                        }) {
+                                            Text("ترقية")
+                                        }
+                                    }
+                                }
+                                CustomRow {
+
+
+
+                                    if(CustomSingleton.isPremiumStore()){
+                                        Text( "الايام المتبقية",Modifier.padding(8.dp))
+                                        val time = LocalDateTime.parse(CustomSingleton.selectedStore!!.subscription.expireAt.replace(" ","T"))
+                                        val diff =
+                                            Duration.between(time, getCurrentDate()).toDays()
+
+                                        Text( diff.toString(),Modifier.padding(8.dp))
+
+                                        if (diff <= 5)
+                                            Button(onClick = {
+
+                                            }) {
+                                                Text("تجديد ")
                                             }
-
-                                        }) {
-                                            Text(if (file != null) "edit" else "add")
-//                                            Text("add")
-                                        }
-                                    }
-                                    if (uriFile != null){
-                                        Button(onClick = {
-                                            saveFileToCache()
-                                        }) {
-                                            Text("Save this file")
-                                        }
                                     }
                                 }
                             }
                         }
+                        if(CustomSingleton.isPremiumStore())
+                            if (CustomSingleton.selectedStore!!.app != null){
+                                item {
+                                    CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+
+                                    }) {
+                                    Column {
+                                        CustomRow {
+                                            Text("هذا المتجر لديه تطبيق في متجر التطبيقات",Modifier.padding(8.dp))
+
+
+
+//                                            else{
+//                                            Button(onClick = {
+//
+//                                            }) {
+//                                                Text("ارسال طلب تصدير المتجر الى تطبيق")
+//                                            }
+//                                        }
+                                        }
+                                        CustomRow{
+                                            Text("اعدادات الخدمة",Modifier.padding(8.dp))
+                                            if (CustomSingleton.selectedStore!!.app!!.hasServiceAccount){
+                                                Button(onClick = {
+
+                                                }) {
+                                                    Text("تعديل")
+                                                }
+                                            }else{
+                                                Button(onClick = {
+
+                                                }) {
+                                                    Text("اضافه")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    }
+                                }
+                            }
+
+
+                        item {
+                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+
+                            }) {
+                                CustomRow {
+                                    Text("النقاط",Modifier.padding(8.dp))
+                                    Text(CustomSingleton.selectedStore!!.subscription.points.toString(),Modifier.padding(8.dp))
+                                }
+                            }
+                        }
+
+                        item {
+                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+
+                            }) {
+                                CustomRow {
+                                    Text("سعر التوصيل",Modifier.padding(8.dp))
+                                    Text(formatPrice(CustomSingleton.selectedStore!!.deliveryPrice.toString()) ,Modifier.padding(8.dp))
+                                    Text(CustomSingleton.selectedStore!!.currencyName,Modifier.padding(8.dp))
+                                }
+                            }
+                        }
+
+
+//                        if (CustomSingleton.selectedStore!!.app != null){
+//
+//
+//                            item {
+//                                LaunchedEffect(null) {
+//                                readFileFromCache()
+//                            }
+//                                CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+//
+//                                }) {
+//
+//                                    CustomRow {
+//                                        Text("اعدادات الخدمة",Modifier.padding(8.dp))
+//
+//                                        Button(onClick = {
+//                                            if (file == null){
+//                                                getContentFile.launch("application/json")
+//                                            }else{
+//                                                saveFileToCache()
+//                                            }
+//
+//                                        }) {
+//                                            Text(if (file != null) "edit" else "add")
+////                                            Text("add")
+//                                        }
+//                                    }
+//                                    if (uriFile != null){
+//                                        Button(onClick = {
+//                                            saveFileToCache()
+//                                        }) {
+//                                            Text("Save this file")
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
                         ///
                         if (SelectedStore.store.value!!.typeId == 1)
                         item {
@@ -167,12 +293,12 @@ class SettingsStoreActivity : ComponentActivity() {
 
                             }) {
                                 CustomRow{
+                                    Text("وضع التعديل")
                                     Switch(
                                         checked = SingletonHome.isEditMode.value,
                                         onCheckedChange = { SingletonHome.isEditMode.value = it },
                                         modifier = Modifier.padding(16.dp)
                                     )
-                                    Text("وضع التعديل")
                                 }
                             }
                         }

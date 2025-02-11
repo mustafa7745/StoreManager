@@ -3,6 +3,7 @@ package com.fekraplatform.storemanger.activities
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -53,15 +54,20 @@ import com.fekraplatform.storemanger.models.OrderComponent
 import com.fekraplatform.storemanger.models.OrderDelivery
 import com.fekraplatform.storemanger.models.OrderProduct
 import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
+import com.fekraplatform.storemanger.shared.CustomIcon2
 import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.CustomRow2
+import com.fekraplatform.storemanger.shared.CustomSingleton2
 import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
+import com.fekraplatform.storemanger.shared.Situations
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.builderForm4
 import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 
@@ -71,7 +77,7 @@ class OrderProductsActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
     private var orderComponent by mutableStateOf<OrderComponent?>(null)
     private var deliveryMen by mutableStateOf<List<DeliveryMan>>(listOf())
-    lateinit var order: Order
+//    lateinit var order: Order
     lateinit var orderProductO: OrderProduct
 
     private var isShowControllProduct by mutableStateOf(false)
@@ -81,17 +87,17 @@ class OrderProductsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val intent = intent
-        val str = intent.getStringExtra("order")
-        if (str != null) {
-            try {
-                order = MyJson.IgnoreUnknownKeys.decodeFromString(str)
-            }catch (e:Exception){
-                finish()
-            }
-        } else {
-            finish()
-        }
+//        val intent = intent
+//        val str = intent.getStringExtra("order")
+//        if (str != null) {
+//            try {
+//                order = MyJson.IgnoreUnknownKeys.decodeFromString(str)
+//            }catch (e:Exception){
+//                finish()
+//            }
+//        } else {
+//            finish()
+//        }
 
         read()
 
@@ -111,6 +117,34 @@ class OrderProductsActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ){
+                        stickyHeader {
+                            if (CustomSingleton2.selectedStoreOrder!!.situationId !in listOf(Situations.CANCELED,Situations.COMPLETED) )
+                            CustomCard2(modifierBox = Modifier.fillMaxWidth().padding(8.dp)) {
+
+                                    Text( " رقم الطلب: " + CustomSingleton2.selectedStoreOrder!! .id.toString(),Modifier.padding(8.dp))
+                                    Text( "الحالة : " + CustomSingleton2.selectedStoreOrder!!.situation.toString(),Modifier.padding(8.dp))
+                                    Text( " اسم المستخدم : "+CustomSingleton2.selectedStoreOrder!!.userName.toString(),Modifier.padding(8.dp))
+                                    Text( "تاريخ الطلب : "+CustomSingleton2.selectedStoreOrder!!.createdAt.toString(),Modifier.padding(8.dp))
+                                    Text(  " رقم المستخدم : "+ CustomSingleton2.selectedStoreOrder!!.userPhone.toString(),
+                                        Modifier
+                                            .padding(8.dp)
+                                            .clickable {
+//                                                intentFunUrl("tel:${CustomSingleton2.selectedStoreOrder!!.userPhone}")
+                                            })
+                                    Text(
+                                        text = CustomSingleton2.selectedStoreOrder!!.amounts.joinToString(
+                                            separator = " و "
+                                        ) { formatPrice(it.amount)  +" "+ it.currencyName },
+                                        fontSize = 14.sp,
+                                    )
+
+
+                                Button(onClick = {
+
+                                    cancelOrder()
+                                }) { Text("الغاء الطلب") }
+                            }
+                        }
                         item {
                             CustomCard(
                                 modifierBox = Modifier
@@ -262,9 +296,19 @@ class OrderProductsActivity : ComponentActivity() {
 
                             }
                             HorizontalDivider()
-                            IconDelete(ids) {
-                                deleteOrderProducts(ids){
-                                    ids = emptyList()
+
+                        }
+                        stickyHeader {
+                            CustomCard2(modifierBox = Modifier) {
+                                CustomRow {
+                                    CustomIcon2(Icons.Default.Add, modifierIcon = Modifier,true) {
+
+                                    }
+                                    IconDelete(ids) {
+                                        deleteOrderProducts(ids){
+                                            ids = emptyList()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -354,8 +398,8 @@ class OrderProductsActivity : ComponentActivity() {
     fun read() {
         stateController.startRead()
 
-        val body = builderForm3()
-            .addFormDataPart("orderId",order.id.toString())
+        val body = builderForm4()
+            .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .build()
 
         requestServer.request2(body, "getOrderProducts", { code, fail ->
@@ -366,18 +410,22 @@ class OrderProductsActivity : ComponentActivity() {
                 MyJson.IgnoreUnknownKeys.decodeFromString(
                     data
                 )
+            if (CustomSingleton2.selectedStoreOrder!!.situationId == Situations.NEW){
+                CustomSingleton2.selectedStoreOrder = CustomSingleton2.selectedStoreOrder!!.copy(situationId = Situations.VIEWD, situation = "تم الاطلاع")
+                updateOrders()
+            }
 
             stateController.successState()
         }
     }
 
-    fun changeQuantity(id:String,qnt:String) {
+    fun changeQuantity(product: OrderProduct) {
         stateController.startAud()
 
-        val body = builderForm3()
-            .addFormDataPart("orderId",order.id.toString())
-            .addFormDataPart("id",id)
-            .addFormDataPart("qnt",qnt)
+        val body = builderForm4()
+            .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
+            .addFormDataPart("id",product.id.toString())
+            .addFormDataPart("qnt",product.quantity.toString())
             .build()
 
         requestServer.request2(body, "updateOrderProductQuantity", { code, fail ->
@@ -390,6 +438,24 @@ class OrderProductsActivity : ComponentActivity() {
                 )
 
         orderComponent =    orderComponent!!.updateOrderProduct(orderProduct)
+
+
+            val newAmount = CustomSingleton2.selectedStoreOrder!!.amounts.map {
+                if (it.currencyId == product.currencyId){
+                    val s = product.quantity - orderProductO.quantity
+                    val am = it.amount.toDouble()
+                    val n = (am + (s * product.price)).toString()
+                    Log.e("ffrr",n)
+                    it.copy(amount = n )
+                }else it
+            }
+                CustomSingleton2.selectedStoreOrder = CustomSingleton2.selectedStoreOrder!!.copy(
+                    amounts = newAmount
+                )
+
+            updateOrders()
+
+
 //          orderComponent!!.copy(
 //
 //
@@ -404,11 +470,37 @@ class OrderProductsActivity : ComponentActivity() {
             stateController.successStateAUD()
         }
     }
+
+    private fun updateOrders() {
+        val newOrders = CustomSingleton2.storeOrders!!.orders.map { order ->
+            if (order.id == CustomSingleton2.selectedStoreOrder!!.id)
+                CustomSingleton2.selectedStoreOrder!!
+            else order
+        }
+        CustomSingleton2.storeOrders = CustomSingleton2.storeOrders!!.copy(orders = newOrders)
+    }
+
+    fun cancelOrder() {
+        stateController.startAud()
+
+        val body = builderForm4()
+            .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
+            .build()
+
+        requestServer.request2(body, "cancelOrder", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            CustomSingleton2.selectedStoreOrder = CustomSingleton2.selectedStoreOrder!!.copy(situationId = Situations.CANCELED, situation = "تم الغاء الطلب")
+            updateOrders()
+            stateController.successStateAUD()
+        }
+    }
     fun chooseDeliveryMan(id:String) {
         stateController.startAud()
 
-        val body = builderForm3()
-            .addFormDataPart("orderId",order.id.toString())
+        val body = builderForm4()
+            .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .addFormDataPart("deliveryManId",id)
             .build()
 
@@ -439,7 +531,8 @@ class OrderProductsActivity : ComponentActivity() {
     fun deleteOrderProducts(ids:List<Int>,onDone:()->Unit) {
         stateController.startAud()
 
-        val body = builderForm3()
+        val body = builderForm4()
+            .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .addFormDataPart("ids",ids.toString())
             .build()
 
@@ -451,6 +544,8 @@ class OrderProductsActivity : ComponentActivity() {
 //                MyJson.IgnoreUnknownKeys.decodeFromString(
 //                    data
 //                )
+
+
 
             orderComponent =  orderComponent!!.filterProduct(ids)
             onDone()
@@ -534,7 +629,7 @@ class OrderProductsActivity : ComponentActivity() {
                             if (product.quantity != orderProductO.quantity)
                                     Button(onClick = {
 
-                                        changeQuantity(product.id.toString(),product.quantity.toString())
+                                        changeQuantity(product)
                                     }) { Text("حفظ") }
                         }
                     }

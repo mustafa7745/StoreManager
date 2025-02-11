@@ -5,14 +5,17 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import com.fekraplatform.storemanger.activities.StoresActivity
 import com.fekraplatform.storemanger.activities.LoginActivity
+import com.fekraplatform.storemanger.application.MyApplication
 import com.fekraplatform.storemanger.models.ErrorMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -95,19 +98,6 @@ class RequestServer(private val activity: ComponentActivity) {
         } else {
             mainRequest(urlPostfix, body, onSuccess, onFail)
         }
-//        if (!isInternetAvailable()) {
-//            onFail(0, "لايوجد اتصال بالانترنت")
-//        }else{
-//            if (!serverConfig.isSetRemoteConfig()){
-//                initVarConfig(serverConfig,{
-//                    onFail(0, "E 5286")
-//                }){
-//                    mainRequest(urlPostfix, body, onSuccess, onFail)
-//                }
-//            }else{
-//                mainRequest(urlPostfix, body, onSuccess, onFail)
-//            }
-//        }
     }
 
     private fun mainRequest(
@@ -150,6 +140,7 @@ class RequestServer(private val activity: ComponentActivity) {
 
 
                                 if (respone.code == 1000){//refresh access token
+
                                     refreshToken{code, fail ->
                                         onFail(code,fail)
                                     }
@@ -173,12 +164,47 @@ class RequestServer(private val activity: ComponentActivity) {
                         is ConnectException -> "Failed to connect to server"
                         else -> e.message ?: "Unknown error occurred"
                     }
-                    onFail(0, "Request failed: $errorMessage")
+                    initVarConfig({
+                        onFail(0, "Not Updated Request failed: $errorMessage")
+                    }){
+                        onFail(0, "Updated Request failed: $errorMessage")
+                    }
                 } finally {
                     okHttpClient.connectionPool.evictAll()
                 }
             }
         }
+    }
+    fun initVarConfig(onFail:()->Unit, onSuccess: () -> Unit) {
+        val remoteConfig = getRemoteConfig()
+        remoteConfig.fetchAndActivate()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val BASE_URL = remoteConfig.getString("BASE_URL")
+                    val BASE_IMAGE_URL = remoteConfig.getString("BASE_IMAGE_URL")
+                    val SUB_FOLDER_PRODUCT = remoteConfig.getString("SUB_FOLDER_PRODUCT")
+                    val TYPE = "storeManager"
+                    val SUB_FOLDER_STORE_LOGOS = remoteConfig.getString("SUB_FOLDER_STORE_LOGOS")
+                    val SUB_FOLDER_STORE_COVERS = remoteConfig.getString("SUB_FOLDER_STORE_COVERS")
+                    val SUB_FOLDER_USERS_LOGOS = remoteConfig.getString("SUB_FOLDER_USERS_LOGOS")
+                    val varRemoteConfig = VarRemoteConfig(
+                        BASE_URL = BASE_URL,
+                        BASE_IMAGE_URL = BASE_IMAGE_URL,
+                        SUB_FOLDER_PRODUCT = SUB_FOLDER_PRODUCT,
+                        TYPE = TYPE,
+                        SUB_FOLDER_STORE_LOGOS = SUB_FOLDER_STORE_LOGOS,
+                        SUB_FOLDER_STORE_COVERS = SUB_FOLDER_STORE_COVERS,
+                    )
+                    serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(varRemoteConfig))
+//                    remoteConfigInRequest = SingletonRemoteConfig.remoteConfig
+                    onSuccess()
+//                stateController.successStateAUD()
+                } else {
+//                stateController.errorStateAUD("frc")
+                    onFail()
+                    Log.e("RemoteConfig", "Failed to fetch remote config", task.exception)
+                }
+            }
     }
 
 
@@ -236,6 +262,7 @@ class RequestServer(private val activity: ComponentActivity) {
         activity.finish()
     }
     private fun refreshToken( onFail: (code: Int, fail: String) -> Unit) {
+//        Toast.makeText(MyApplication.AppContext,"تحديث الجلسة",Toast.LENGTH_SHORT).show()
         val aToken = AToken()
         val body = builderForm2()
             .addFormDataPart("accessToken",aToken.getAccessToken().token)
