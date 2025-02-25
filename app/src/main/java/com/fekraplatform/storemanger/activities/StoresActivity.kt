@@ -60,9 +60,11 @@ import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.storage.MyAppStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -186,7 +188,6 @@ class StoresActivity : ComponentActivity() {
                                         Text("اضافة متجر جديد")
                                     }
                                 }
-
                             }
                         }
                         if (isShowAddCatgory.value) modalAddMyCategory()
@@ -196,8 +197,6 @@ class StoresActivity : ComponentActivity() {
                 }
         }
     }
-
-
 
     ///Modals
     @OptIn(ExperimentalMaterial3Api::class)
@@ -730,6 +729,14 @@ class StoresActivity : ComponentActivity() {
 
     ///
     private fun mainInit() {
+        val myAppStorage = MyAppStorage()
+        Log.e("mm",myAppStorage.getLang().code)
+        if (myAppStorage.getLang().code != getAppLanguage(this) && myAppStorage.getLang().name.isEmpty() ){
+            setLocale(this,myAppStorage.getLang().code)
+//            recreate()
+        }else{
+            setLocale(this,myAppStorage.getLang().code)
+        }
         if (!requestServer.serverConfig.isSetSubscribeApp()) {
             subscribeToAppTopic()
         }
@@ -764,3 +771,15 @@ class StoresActivity : ComponentActivity() {
         }
     }
 }
+
+@Serializable
+data class RemoteConfigModel(
+    val TYPE_STORE_MANAGER: String,
+    val SUB_FOLDER_STORE_COVERS: String,
+    val SUB_FOLDER_PRODUCT: String,
+    val BASE_IMAGE_URL: String,
+    val BASE_URL: String,
+    val SUB_FOLDER_STORE_LOGOS: String,
+    val SUB_FOLDER_USERS_LOGOS: String,
+    val VERSION:String = "v1"
+)

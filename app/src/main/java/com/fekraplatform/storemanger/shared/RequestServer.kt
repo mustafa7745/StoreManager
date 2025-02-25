@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import com.fekraplatform.storemanger.activities.StoresActivity
 import com.fekraplatform.storemanger.activities.LoginActivity
+import com.fekraplatform.storemanger.activities.RemoteConfigModel
 import com.fekraplatform.storemanger.application.MyApplication
 import com.fekraplatform.storemanger.models.ErrorMessage
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import org.json.JSONObject
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -111,7 +113,7 @@ class RequestServer(private val activity: ComponentActivity) {
                 val okHttpClient = createOkHttpClientWithCustomCert()
                 try {
                     val finalUrl =
-                        "${serverConfig.getRemoteConfig().BASE_URL}${serverConfig.getRemoteConfig().VERSION}/${serverConfig.getRemoteConfig().TYPE}/${urlPostfix}"
+                        "${serverConfig.getRemoteConfig().BASE_URL}${serverConfig.getRemoteConfig().VERSION}/${serverConfig.getRemoteConfig().TYPE_STORE_MANAGER}/${urlPostfix}"
 
                     val request = Request.Builder()
                         .url(finalUrl)
@@ -180,22 +182,33 @@ class RequestServer(private val activity: ComponentActivity) {
         remoteConfig.fetchAndActivate()
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val BASE_URL = remoteConfig.getString("BASE_URL")
-                    val BASE_IMAGE_URL = remoteConfig.getString("BASE_IMAGE_URL")
-                    val SUB_FOLDER_PRODUCT = remoteConfig.getString("SUB_FOLDER_PRODUCT")
-                    val TYPE = "storeManager"
-                    val SUB_FOLDER_STORE_LOGOS = remoteConfig.getString("SUB_FOLDER_STORE_LOGOS")
-                    val SUB_FOLDER_STORE_COVERS = remoteConfig.getString("SUB_FOLDER_STORE_COVERS")
-                    val SUB_FOLDER_USERS_LOGOS = remoteConfig.getString("SUB_FOLDER_USERS_LOGOS")
-                    val varRemoteConfig = VarRemoteConfig(
-                        BASE_URL = BASE_URL,
-                        BASE_IMAGE_URL = BASE_IMAGE_URL,
-                        SUB_FOLDER_PRODUCT = SUB_FOLDER_PRODUCT,
-                        TYPE = TYPE,
-                        SUB_FOLDER_STORE_LOGOS = SUB_FOLDER_STORE_LOGOS,
-                        SUB_FOLDER_STORE_COVERS = SUB_FOLDER_STORE_COVERS,
+                    val allConfigs = remoteConfig.all
+                    // Convert the map to a JSON object
+                    val jsonObject = JSONObject()
+                    for ((key, value) in allConfigs) {
+                        jsonObject.put(key, value.asString())
+                    }
+
+                    val myRemoteConfig = MyJson.IgnoreUnknownKeys.decodeFromString<RemoteConfigModel>(
+                        jsonObject.toString()
                     )
-                    serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(varRemoteConfig))
+
+//                    val BASE_URL = remoteConfig.getString("BASE_URL")
+//                    val BASE_IMAGE_URL = remoteConfig.getString("BASE_IMAGE_URL")
+//                    val SUB_FOLDER_PRODUCT = remoteConfig.getString("SUB_FOLDER_PRODUCT")
+//                    val TYPE = "storeManager"
+//                    val SUB_FOLDER_STORE_LOGOS = remoteConfig.getString("SUB_FOLDER_STORE_LOGOS")
+//                    val SUB_FOLDER_STORE_COVERS = remoteConfig.getString("SUB_FOLDER_STORE_COVERS")
+//                    val SUB_FOLDER_USERS_LOGOS = remoteConfig.getString("SUB_FOLDER_USERS_LOGOS")
+//                    val varRemoteConfig = VarRemoteConfig(
+//                        BASE_URL = BASE_URL,
+//                        BASE_IMAGE_URL = BASE_IMAGE_URL,
+//                        SUB_FOLDER_PRODUCT = SUB_FOLDER_PRODUCT,
+//                        TYPE = TYPE,
+//                        SUB_FOLDER_STORE_LOGOS = SUB_FOLDER_STORE_LOGOS,
+//                        SUB_FOLDER_STORE_COVERS = SUB_FOLDER_STORE_COVERS,
+//                    )
+                    serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(myRemoteConfig))
 //                    remoteConfigInRequest = SingletonRemoteConfig.remoteConfig
                     onSuccess()
 //                stateController.successStateAUD()

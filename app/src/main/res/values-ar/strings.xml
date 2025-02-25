@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">StoreManger</string>
+    <string name="login">تسجيل الدخول</string>
+    <string name="Phonenumber">رقم الهاتف</string>
+    <string name="password">الرقم السري</string>
+    <string name="donthavaccount">ليس لدي حساب</string>
+    <string name="register">اشتراك</string>
+    <string name="forgetpassword">نسيت كلمة المرور؟</string>
+    <string name="acceptLogin">"من خلال تسجيل الدخول او الاشتراك فانك توافق على "</string>
+    <string name="policyUse">سياسة الاستخدام</string>
+    <string name="termSeivec">"شروط الخدمة "</string>
+    <string name="Go">دخول</string>
+</resources>

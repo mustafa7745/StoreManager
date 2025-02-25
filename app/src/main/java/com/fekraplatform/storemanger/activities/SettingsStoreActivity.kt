@@ -1,38 +1,48 @@
 package com.fekraplatform.storemanger.activities
 
+import android.app.AlertDialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.Card
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,44 +50,52 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
-import coil.compose.rememberImagePainter
-import com.fekraplatform.storemanger.R
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.Purchase.PurchaseState
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
 import com.fekraplatform.storemanger.Singlton.SelectedStore
-import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
+import com.fekraplatform.storemanger.application.MyApplication
+import com.fekraplatform.storemanger.models.Currency
+import com.fekraplatform.storemanger.models.PageModel
+import com.fekraplatform.storemanger.shared.ConfirmDialog
 import com.fekraplatform.storemanger.shared.CustomCard
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomRow
+import com.fekraplatform.storemanger.shared.CustomRow2
 import com.fekraplatform.storemanger.shared.CustomSingleton
-import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose2
 import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.VarRemoteConfig
-import com.fekraplatform.storemanger.shared.builderForm
+import com.fekraplatform.storemanger.shared.builderForm4
 import com.fekraplatform.storemanger.shared.formatPrice
+import com.fekraplatform.storemanger.storage.GoogleBillingStorage
+import com.fekraplatform.storemanger.storage.MyBilling
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.ktx.messaging
-import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.Serializable
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody
+import okio.BufferedSink
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 
 class SettingsStoreActivity : ComponentActivity() {
@@ -88,249 +106,515 @@ class SettingsStoreActivity : ComponentActivity() {
 
     var file by mutableStateOf<String?>(null)
 
+    val pages = listOf(
+        PageModel("",0),
+        PageModel("شراء الاشتراكات",1),
+                PageModel("شراء النقاط",2),
+                        PageModel("أوقات الدوام",3)
+    )
+    var page by mutableStateOf(pages.first())
+
+
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SingletonHome.setStateController1(stateController)
         SingletonHome.setReqestController(requestServer)
-
-//        val intent = intent
-//        val str = intent.getStringExtra("store")
-//        if (str != null) {
-//            try {
-//                store = MyJson.IgnoreUnknownKeys.decodeFromString(str)
-//            } catch (e: Exception) {
-//                finish()
-//            }
-//
-//        } else {
-//            finish()
-//        }
-
+        stateController.successState()
         enableEdgeToEdge()
         setContent {
-            StoreMangerTheme {
-                MainCompose2(
-                    0.dp, stateController, this,
+            MainView()
+        }
+    }
+
+    @Composable
+    @OptIn(ExperimentalFoundationApi::class)
+    private fun MainView() {
+        StoreMangerTheme {
+            BackHand()
+            MainCompose2(
+                0.dp, stateController, this,
 
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Top,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ){
-                        stickyHeader {
-                            MyHeader({
-                                finish()
-                            }) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    stickyHeader {
+                        MyHeader({
+                            backHandler()
+                        }) {
+                            Row {
                                 Text("اعدادات المتجر")
+                                if (page != pages.first()) {
+                                    Text(" | ")
+                                    Text(page.pageName)
+                                }
                             }
+
                         }
+                    }
 
-                        item {
-                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+                    if (page.pageId == 0)
+                        MainPage()
+                    else if (page.pageId == 1 || page.pageId == 2)
+                        SubscriptionPage()
+                    else if (page.pageId == 3)
+                        StoreTimePage()
 
-                            }) {
-                                CustomRow {
-                                    Text("الموقع",Modifier.padding(8.dp))
 
-                                    Button(onClick = {
+                    //                        if (CustomSingleton.selectedStore!!.app != null){
+    //
+    //
+    //                            item {
+    //                                LaunchedEffect(null) {
+    //                                readFileFromCache()
+    //                            }
+    //                                CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+    //
+    //                                }) {
+    //
+    //                                    CustomRow {
+    //                                        Text("اعدادات الخدمة",Modifier.padding(8.dp))
+    //
+    //                                        Button(onClick = {
+    //                                            if (file == null){
+    //                                                getContentFile.launch("application/json")
+    //                                            }else{
+    //                                                saveFileToCache()
+    //                                            }
+    //
+    //                                        }) {
+    //                                            Text(if (file != null) "edit" else "add")
+    ////                                            Text("add")
+    //                                        }
+    //                                    }
+    //                                    if (uriFile != null){
+    //                                        Button(onClick = {
+    //                                            saveFileToCache()
+    //                                        }) {
+    //                                            Text("Save this file")
+    //                                        }
+    //                                    }
+    //                                }
+    //                            }
+    //                        }
+                    ///
 
-                                        gotoStoreLocation()
-                                    }) {
-                                        Text(if (SelectedStore.store.value!!.latLng != null) "تعديل" else "اضافة")
-                                    }
-                                }
-                            }
+
+                }
+                if (isShowUpdateStoreTime) modalUpdateStoreTime()
+
+                if (isShowUpdateDeliveryPrice) modalUpdateDeliveryPrice()
+            }
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    private fun LazyListScope.MainPage() {
+        stickyHeader {
+            Text("الرئيسية")
+            HorizontalDivider()
+        }
+        item {
+            CustomCard(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+
+                }) {
+                CustomRow {
+                    Text("الموقع", Modifier.padding(8.dp))
+
+                    Button(onClick = {
+
+                        gotoStoreLocation()
+                    }) {
+                        Text(if (SelectedStore.store.value!!.latLng != null) "تعديل" else "اضافة")
+                    }
+                }
+            }
+        }
+        item {
+            CustomCard(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+                    page = pages[3]
+                }) {
+                CustomRow {
+                    Text("اوقات الدوام", Modifier.padding(8.dp))
+                }
+            }
+        }
+        item {
+            CustomCard(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+
+                    isShowUpdateDeliveryPrice = true
+                }) {
+                CustomRow {
+                    Text("سعر التوصيل", Modifier.padding(8.dp))
+                    Text(
+                        formatPrice(CustomSingleton.selectedStore!!.deliveryPrice.toString()),
+                        Modifier.padding(8.dp)
+                    )
+                    Text(CustomSingleton.selectedStore!!.currencyName, Modifier.padding(8.dp))
+                }
+            }
+        }
+        stickyHeader {
+            Text("الاشتراكات والنقاط")
+            HorizontalDivider()
+        }
+        item {
+            CustomCard2(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+
+                }) {
+                CustomRow {
+                    Text("نوع الاشتراك", Modifier.padding(8.dp))
+                    if (CustomSingleton.isPremiumStore()) {
+                        Text("Premium", Modifier.padding(8.dp))
+                    }
+//                    else {
+                        Button(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            onClick = {
+                            isSubs = "1"
+                            page = pages[1]
+                        }) {
+                            Text("ترقية")
                         }
+//                    }
+                }
+                CustomRow {
 
-                        item {
-                            CustomCard2( modifierBox = Modifier.fillMaxSize().clickable {
-
-                            }) {
-                                CustomRow {
-                                    Text("نوع الاشتراك",Modifier.padding(8.dp))
-                                    if(CustomSingleton.isPremiumStore()){
-                                        Text( "Premium",Modifier.padding(8.dp))
-                                    }else{
-                                        Button(onClick = {
-
-                                        }) {
-                                            Text("ترقية")
-                                        }
-                                    }
-                                }
-                                CustomRow {
-
-
-
-                                    if(CustomSingleton.isPremiumStore()){
-                                        Text( "الايام المتبقية",Modifier.padding(8.dp))
-                                        val time = LocalDateTime.parse(CustomSingleton.selectedStore!!.subscription.expireAt.replace(" ","T"))
-                                        val diff =
-                                            Duration.between(time, getCurrentDate()).toDays()
-
-                                        Text( diff.toString(),Modifier.padding(8.dp))
-
-                                        if (diff <= 5)
-                                            Button(onClick = {
-
-                                            }) {
-                                                Text("تجديد ")
-                                            }
-                                    }
-                                }
-                            }
-                        }
-                        if(CustomSingleton.isPremiumStore())
-                            if (CustomSingleton.selectedStore!!.app != null){
-                                item {
-                                    CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
-
-                                    }) {
-                                    Column {
-                                        CustomRow {
-                                            Text("هذا المتجر لديه تطبيق في متجر التطبيقات",Modifier.padding(8.dp))
-
-
-
-//                                            else{
-//                                            Button(onClick = {
-//
-//                                            }) {
-//                                                Text("ارسال طلب تصدير المتجر الى تطبيق")
-//                                            }
-//                                        }
-                                        }
-                                        CustomRow{
-                                            Text("اعدادات الخدمة",Modifier.padding(8.dp))
-                                            if (CustomSingleton.selectedStore!!.app!!.hasServiceAccount){
-                                                Button(onClick = {
-
-                                                }) {
-                                                    Text("تعديل")
-                                                }
-                                            }else{
-                                                Button(onClick = {
-
-                                                }) {
-                                                    Text("اضافه")
-                                                }
-                                            }
-                                        }
-                                    }
-                                    }
-                                }
-                            }
-
-
-                        item {
-                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
-
-                            }) {
-                                CustomRow {
-                                    Text("النقاط",Modifier.padding(8.dp))
-                                    Text(CustomSingleton.selectedStore!!.subscription.points.toString(),Modifier.padding(8.dp))
-                                }
-                            }
-                        }
-
-                        item {
-                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
-
-                            }) {
-                                CustomRow {
-                                    Text("سعر التوصيل",Modifier.padding(8.dp))
-                                    Text(formatPrice(CustomSingleton.selectedStore!!.deliveryPrice.toString()) ,Modifier.padding(8.dp))
-                                    Text(CustomSingleton.selectedStore!!.currencyName,Modifier.padding(8.dp))
-                                }
-                            }
-                        }
-
-
-//                        if (CustomSingleton.selectedStore!!.app != null){
-//
-//
-//                            item {
-//                                LaunchedEffect(null) {
-//                                readFileFromCache()
+                    if (CustomSingleton.isPremiumStore()) {
+                        val time = LocalDateTime.parse(
+                            CustomSingleton.selectedStore!!.subscription.expireAt.replace(
+                                " ",
+                                "T"
+                            )
+                        )
+                        val diff = Duration.between(getCurrentDate(), time).toDays()
+                        Text("الايام المتبقية", Modifier.padding(8.dp))
+                        Text(diff.toString(), Modifier.padding(8.dp))
+//                        if (diff <= 5) {
+//                            Button(
+//                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+//                                onClick = {
+//                                isSubs = "1"
+//                                page = pages[1]
+//                            }) {
+//                                Text("تجديد ")
 //                            }
-//                                CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+//                        } else {
 //
-//                                }) {
 //
-//                                    CustomRow {
-//                                        Text("اعدادات الخدمة",Modifier.padding(8.dp))
-//
-//                                        Button(onClick = {
-//                                            if (file == null){
-//                                                getContentFile.launch("application/json")
-//                                            }else{
-//                                                saveFileToCache()
-//                                            }
-//
-//                                        }) {
-//                                            Text(if (file != null) "edit" else "add")
-////                                            Text("add")
-//                                        }
-//                                    }
-//                                    if (uriFile != null){
-//                                        Button(onClick = {
-//                                            saveFileToCache()
-//                                        }) {
-//                                            Text("Save this file")
-//                                        }
-//                                    }
-//                                }
-//                            }
 //                        }
-                        ///
-                        if (SelectedStore.store.value!!.typeId == 1)
-                        item {
-                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
-
-                            }) {
-                                CustomRow{
-                                    Text("وضع التعديل")
-                                    Switch(
-                                        checked = SingletonHome.isEditMode.value,
-                                        onCheckedChange = { SingletonHome.isEditMode.value = it },
-                                        modifier = Modifier.padding(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                        if (CustomSingleton.selectedStore != null && CustomSingleton.isSharedStore()){
-                            if ((SingletonHome.categories.value !=  CustomSingleton.selectedStore!!.storeConfig!!.categories ||
-                                        SingletonHome.sections.value != CustomSingleton.selectedStore!!.storeConfig!!.sections ||
-                                        SingletonHome.nestedSection.value != CustomSingleton.selectedStore!!.storeConfig!!.nestedSections ||
-                                        SingletonHome.products.value != CustomSingleton.selectedStore!!.storeConfig!!.products )
-                                && SingletonHome.isEditMode.value){
-                                item {
-                                    CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
-                                        SingletonHome.updateStoreConfig()
-                                    }){
-                                        if (SingletonHome.stateController.isLoadingAUD.value)
-                                            LinearProgressIndicator(Modifier.fillMaxWidth())
-                                        else
-                                            Text("حفظ التعديلات", Modifier.clickable {
-                                                SingletonHome.updateStoreConfig()
-                                                Log.e("wwww", SingletonHome.categories.value.toString())
-                                            })
-                                    }
-
-                                }
-                            }
-                        }
-
 
                     }
                 }
             }
         }
+        if (CustomSingleton.isPremiumStore())
+            if (CustomSingleton.selectedStore!!.app != null) {
+                item {
+                    CustomCard(modifierBox = Modifier
+                        .fillMaxSize()
+                        .clickable {
+
+                        }) {
+                        Column {
+                            CustomRow {
+                                Text(
+                                    "هذا المتجر لديه تطبيق في متجر التطبيقات",
+                                    Modifier.padding(8.dp)
+                                )
+
+
+                                //                                            else{
+    //                                            Button(onClick = {
+    //
+    //                                            }) {
+    //                                                Text("ارسال طلب تصدير المتجر الى تطبيق")
+    //                                            }
+    //                                        }
+                            }
+                            CustomRow {
+                                Text("اعدادات الخدمة", Modifier.padding(8.dp))
+                                if (CustomSingleton.selectedStore!!.app!!.hasServiceAccount) {
+                                    Button(onClick = {
+                                        getContentServiceAccount.launch("application/json")
+                                    }) {
+                                        Text("تعديل")
+                                    }
+                                } else {
+                                    Button(onClick = {
+                                        getContentServiceAccount.launch("application/json")
+                                    }) {
+                                        Text("اضافه")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        item {
+            CustomCard2(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+
+                }) {
+                CustomRow {
+                    Text("النقاط", Modifier.padding(8.dp))
+                    Text(
+                        CustomSingleton.selectedStore!!.subscription.points.toString(),
+                        Modifier.padding(8.dp)
+                    )
+                }
+                Button(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    onClick = {
+
+                        isSubs = "0"
+                        page = pages[2]
+                    }) {
+                    Text("شراء النقاط")
+                }
+            }
+        }
+
+        if (SelectedStore.store.value!!.typeId == 1)
+            item {
+                CustomCard(modifierBox = Modifier
+                    .fillMaxSize()
+                    .clickable {
+
+                    }) {
+                    CustomRow {
+                        Text("وضع التعديل")
+                        Switch(
+                            checked = SingletonHome.isEditMode.value,
+                            onCheckedChange = { SingletonHome.isEditMode.value = it },
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+        if (CustomSingleton.selectedStore != null && CustomSingleton.isSharedStore()) {
+            if ((SingletonHome.categories.value != CustomSingleton.selectedStore!!.storeConfig!!.categories ||
+                        SingletonHome.sections.value != CustomSingleton.selectedStore!!.storeConfig!!.sections ||
+                        SingletonHome.nestedSection.value != CustomSingleton.selectedStore!!.storeConfig!!.nestedSections ||
+                        SingletonHome.products.value != CustomSingleton.selectedStore!!.storeConfig!!.products)
+                && SingletonHome.isEditMode.value
+            ) {
+                item {
+                    CustomCard(modifierBox = Modifier
+                        .fillMaxSize()
+                        .clickable {
+                            SingletonHome.updateStoreConfig()
+                        }) {
+                        if (SingletonHome.stateController.isLoadingAUD.value)
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        else
+                            Text("حفظ التعديلات", Modifier.clickable {
+                                SingletonHome.updateStoreConfig()
+                                Log.e("wwww", SingletonHome.categories.value.toString())
+                            })
+                    }
+
+                }
+            }
+        }
     }
+
+    var storeTime by mutableStateOf(emptyList<StoreTime2>())
+    @OptIn(ExperimentalFoundationApi::class)
+    private fun LazyListScope.StoreTimePage(){
+        if (storeTime.isEmpty()) getStoreTime()
+
+        itemsIndexed(storeTime){index, item ->
+            CustomCard2(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+                    selectedStoreTime = item
+                    isShowUpdateStoreTime = true
+                }) {
+                CustomRow2 {
+                    Text(item.day)
+                    if (item.storeTime == null){
+                        Button(onClick = {
+                            updateStoreTime((index+1).toString(),null)
+//                        updatePoints(item.isPending,item.productId,item.purchaseToken)
+                        }) {
+                            Text("اضافة")
+                        }
+                    }
+                }
+                if (item.storeTime != null){
+                    CustomRow2 {
+                        Text("يفتح الساعة: " + formatTime(item.storeTime!!.openAt)?.get(0)
+                            .toString() )
+                        Text(formatTime(item.storeTime!!.openAt)?.get(1)
+                            .toString()).toString()
+                    }
+                    CustomRow2 {
+                        Text("يغلق الساعة: " + formatTime(item.storeTime.closeAt)?.get(0)
+                            .toString())
+                        Text(formatTime(item.storeTime.closeAt)?.get(1)
+                            .toString())
+                    }
+                    CustomRow2 {
+                        if (item.storeTime.isOpen == 1) Text("مفتوح")  else  Text("مغلق")
+                    }
+                }
+            }
+
+        }
+
+    }
+    val googleBillingStorage = GoogleBillingStorage()
+    var inAppProducts by mutableStateOf(emptyList<SubscriptionModel>())
+    var productDetails by mutableStateOf(emptyList<ProductDetails>())
+    var myBillings by mutableStateOf(googleBillingStorage.getMyBillings())
+    lateinit var isSubs:String
+    private fun LazyListScope.SubscriptionPage() {
+        item {
+            LaunchedEffect(null) {
+                inAppProducts = emptyList()
+                getInAppProducts()
+            }
+        }
+
+
+        if (myBillings.isNotEmpty()){
+            itemsIndexed(myBillings) { index, item ->
+                CustomCard(modifierBox = Modifier
+                    .fillMaxSize()
+                    .clickable {
+
+                    }) {
+                    CustomRow {
+                        Text(item.name)
+                        Button(onClick = {
+                            updatePoints(item.isPending,item.productId,item.purchaseToken)
+                        }) {
+                            Text("حفظ في السرفر والتحقق")
+                        }
+                    }}
+            }
+        }
+
+        itemsIndexed(inAppProducts) { index, item ->
+            CustomCard(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+
+                }) {
+                CustomRow {
+                    Text(item.name.toString(), Modifier.padding(8.dp))
+                    Text( "$"+ formatPrice(item.price.toString()),
+                        Modifier
+                            .padding(8.dp)
+                            .clickable {
+                                updatePoints(true,item.productId,"")
+                            })
+//                    val myPurchase = myPurchases.find { it.productId == item.productId }
+
+                    Button(
+                        enabled = !item.isPending,
+                        onClick = {
+                            val sku = productDetails.map { it.productId }
+                            if (item.productId !in sku)
+                                stateController.showMessage("هذا غير موجود في قائمة منتجات الدفع")
+                            else {
+                                val p = productDetails.find { it.productId == item.productId }
+                                if (p != null) {
+                                    launchPurchaseFlow(p)
+//                                    if (myPurchase == null)
+//
+//                                    else if (myPurchase.status == PurchaseState.PENDING) {
+//
+//                                    } else if (!myPurchase.isAcked) {
+//                                        acknowledgePurchase(myPurchase.token)
+//                                    }
+//                                    else if (myPurchase.isAcked) {
+//                                        updatePoints(MyJson.MyJson.encodeToString(listOf(myPurchase.productId))) {
+//                                            consumePurchases(myPurchase.token)
+//                                        }
+//                                    }
+                                }
+
+//                            stateController.showMessage("processing")
+                            }
+
+                        }) {
+
+
+                        Text(
+                            "شراء"
+//                            if (myPurchase == null)
+//
+//                            else if (myPurchase.status == PurchaseState.PENDING)
+//                                "بانتظار معالجة الدفع"
+//                            else if (!myPurchase.isAcked)
+//                                "الحصول على النقاط (A)"
+//                            else "الحصول على النقاط (P)"
+
+                        )
+                    }
+                }
+//                val ma = myBillings.find { it.productId == item.productId }
+//                if (ma != null) {
+//                    ma.purchases.forEach {
+//                        if (it.status == Purchase.PurchaseState.PURCHASED) {
+//                            Button(onClick = {
+//
+//                            }) { Text("") }
+//                        }
+//                    }
+//                }
+            }
+
+        }
+//        item {
+//            Button(onClick = {
+//                getPreviousPurchases()
+//            }) {
+//                Text("get history")
+//            }
+//        }
+
+//        if (myPreviousPurchases.isNotEmpty()) {
+//            item {
+//                Text("مشترياتي السابقة")
+//            }
+//
+//            itemsIndexed(myPreviousPurchases) { index, item ->
+//                CustomCard(modifierBox = Modifier
+//                    .fillMaxSize()
+//                    .clickable {
+//
+//                    }) {
+//                    Text(item.products.toString())
+//                    Text(item.orderId.toString())
+//                    Text(MyJson.IgnoreUnknownKeys.encodeToString(item))
+//                    Button(onClick = {
+//                        consumePurchases(item.purchaseToken)
+//                    }) {
+//                        Text("consume")
+//                    }
+//                }
+//            }
+//        }
+    }
+
     private fun gotoStoreLocation() {
         val intent = Intent(
             this,
@@ -377,4 +661,669 @@ class SettingsStoreActivity : ComponentActivity() {
             uriFile = uri
         }
     }
+    private fun backHandler() {
+        if (page.pageId != 0) {
+            page = pages.first()
+        } else
+            finish()
+    }
+    @Composable
+    private fun BackHand() {
+        BackHandler {
+            backHandler()
+        }
+    }
+
+
+    private val purchasesUpdatedListener =
+        PurchasesUpdatedListener { billingResult, purchases ->
+            when (billingResult.responseCode) {
+                BillingClient.BillingResponseCode.OK -> {
+                    purchases?.forEach { purchase ->
+                        when (purchase.purchaseState) {
+                            PurchaseState.PURCHASED -> {
+                                setGooglePurchaseStorage(false,purchase)
+                                updatePoints(false,purchase.products.first(),purchase.purchaseToken)
+                            }
+                            PurchaseState.PENDING -> {
+                               setGooglePurchaseStorage(true,purchase)
+                               updatePoints(true,purchase.products.first(),purchase.purchaseToken)
+                            }
+                        }
+                    }
+                }
+                BillingClient.BillingResponseCode.USER_CANCELED -> {
+                    stateController.showMessage("Cenceled")
+                    // User canceled the purchase
+                }
+                else -> {
+                }
+            }
+        }
+
+    private fun setGooglePurchaseStorage(isPending: Boolean, purchase: Purchase) {
+        val b = googleBillingStorage.getMyBillings().toMutableList()
+        val inAppProduct = inAppProducts.find { it.productId == purchase.products.first() }
+        purchase.products.first()
+        b += MyBilling(
+            isPending, inAppProduct?.name ?: "Unk name",purchase.products.first(), purchase.purchaseToken
+        )
+        googleBillingStorage.setMyBillings(b)
+    }
+
+    private var params: PendingPurchasesParams = PendingPurchasesParams.newBuilder()
+        .enableOneTimeProducts()
+        .build()
+
+    private var billingClient: BillingClient = BillingClient.newBuilder(MyApplication.AppContext)
+        .enablePendingPurchases(params)
+        .setListener(purchasesUpdatedListener) // Set the listener for purchase updates
+        .build()
+
+    fun getInAppProducts() {
+        stateController.startAud()
+
+        val body = builderForm4()
+            .addFormDataPart("isSubs",isSubs)
+            .build()
+
+        requestServer.request2(body, "getInAppProducts", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val inAppProducts1:List<SubscriptionModel> =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
+
+            getProducts(inAppProducts1.map { it.productId },{
+                stateController.errorStateAUD(it)
+            }){
+
+                productDetails = it
+                inAppProducts = inAppProducts1
+                inAppProducts.forEach { inAppProduct ->
+                    if (!inAppProduct.isPending){
+                        googleBillingStorage.setMyBillings(googleBillingStorage.getMyBillings().filterNot { it.productId == inAppProduct.productId })
+                    }
+                }
+                stateController.successStateAUD()
+            }
+        }
+    }
+
+    fun getStoreTime() {
+        stateController.startAud()
+
+        val body = builderForm4()
+            .build()
+
+        requestServer.request2(body, "getStoreTime", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result:List<StoreTime2> =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
+            storeTime = result
+            stateController.successStateAUD()
+        }
+    }
+
+    fun updatePoints(isPending:Boolean, productId: String,purchaseToken:String,onSuccess: () -> Unit = {}) {
+        if (isPending){
+            stateController.showMessage("جاري حفظ معلومات الدفع حتى اكتمال معالجة الدفع")
+        }else{
+            if (isSubs == "0"){
+                stateController.showMessage("جاري الحصول على النقاط")
+            }else{
+                stateController.showMessage("جاري الاشتراك")
+            }
+
+        }
+
+        stateController.startAud()
+//        val googleBillingStorage = GoogleBillingStorage()
+        val body = builderForm4()
+            .addFormDataPart("productId",productId)
+            .addFormDataPart("purchaseToken",purchaseToken)
+            .build()
+
+        requestServer.request2(body, "updatePoints", { code, fail ->
+            myBillings = googleBillingStorage.getMyBillings()
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result:SubscriptionModel =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
+
+            inAppProducts = inAppProducts.map {
+                if(it.id == result.id){
+                    result
+                }else it
+            }
+            if (!result.isPending){
+                if (isSubs == "0"){
+                    CustomSingleton.selectedStore = CustomSingleton.selectedStore!!.copy(subscription =CustomSingleton.selectedStore!!.subscription.copy(points = CustomSingleton.selectedStore!!.subscription.points + result.points) )
+                    stateController.showMessage("تم الحصول على النقاط بنجاح")
+                }else{
+                    stateController.showMessage("تم الاشتراك بنجاح")
+                }
+
+//                stateController.showMessage("Add Done: "+ result.points)
+
+            }
+            googleBillingStorage.setMyBillings(googleBillingStorage.getMyBillings().filterNot { it.productId == productId })
+            myBillings.filterNot { it.productId == productId }
+            onSuccess()
+            stateController.successStateAUD()
+        }
+    }
+
+    fun updateStoreTime(day: String, storeTimeParameter: StoreTime?) {
+        stateController.startAud()
+//        val googleBillingStorage = GoogleBillingStorage()
+        val body = builderForm4()
+            .addFormDataPart("day",day)
+            if (storeTimeParameter != null){
+                body.addFormDataPart("openAt", storeTimeParameter.openAt)
+                body.addFormDataPart("closeAt",storeTimeParameter.closeAt)
+                body.addFormDataPart("isOpen", storeTimeParameter.isOpen.toString())
+            }
+
+
+        requestServer.request2(body.build(), "updateStoreTime", { code, fail ->
+
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result:StoreTime2 =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
+
+            storeTime = storeTime.map {
+                if (it.day == result.day)
+                    result
+                else it
+            }
+            isShowUpdateStoreTime = false
+            stateController.successStateAUD()
+        }
+    }
+
+    fun getProducts(productIds: List<String>,onFail:(String)->Unit,onSuccess:(List<ProductDetails>)->Unit){
+        startConnection({
+            onFail(it)
+        }){
+            queryProducts(productIds,{
+                onFail(it)
+            }){
+                onSuccess(it)
+            }
+        }
+    }
+    fun queryProducts(productIds: List<String>,onFail:(String)->Unit,onSuccess:(List<ProductDetails>)->Unit) {
+        val skuList = productIds // Replace with your product IDs
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(
+                skuList.map { skuId ->
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(skuId)
+                        .setProductType(BillingClient.ProductType.INAPP) // Use INAPP for one-time purchases
+                        .build()
+                }
+            )
+            .build()
+
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && productDetailsList != null) {
+                onSuccess(productDetailsList)
+                // Handle the product details list
+                Log.e("eeeeww",productDetailsList.toString())
+            }else{
+                onFail("Error response billing"+billingResult.responseCode )
+            }
+        }
+    }
+    private fun startConnection(onFail: (String) -> Unit, onSuccess: () -> Unit) {
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    onSuccess()
+                }else{
+                    onFail("connection billing fail: "+ billingResult.responseCode)
+                }
+            }
+
+            override fun onBillingServiceDisconnected() {
+                onFail("billing Service Disconnect")
+                // Try to restart the connection later
+            }
+        })
+    }
+    fun launchPurchaseFlow(productDetails: ProductDetails) {
+        val billingFlowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(
+                listOf(
+                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                        .setProductDetails(productDetails)
+                        .build()
+                )
+            )
+            .build()
+
+        billingClient.launchBillingFlow(this, billingFlowParams)
+    }
+
+
+    var uriServiceAccount by  mutableStateOf<Uri?>(null)
+    val getContentServiceAccount = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null){
+            uriServiceAccount = uri
+
+            ConfirmDialog(this) {
+
+                updateServiceAccount(it)
+            }
+
+        }
+    }
+
+    private var currencies by mutableStateOf<List<Currency>>(listOf())
+
+    private var isShowUpdateDeliveryPrice by mutableStateOf(false)
+    private var isShowUpdateStoreTime by mutableStateOf(false)
+    private fun updateDeliveryPrice(price:String,deliveryPriceCurrency:String) {
+        stateController.startAud()
+        val body = builderForm4()
+            .addFormDataPart("price",price)
+            .addFormDataPart("deliveryPriceCurrency",deliveryPriceCurrency)
+
+        requestServer.request2(body.build(), "updateStoreDeliveryPrice", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+          CustomSingleton.selectedStore =  CustomSingleton.selectedStore!!.copy(deliveryPrice = price.toDouble(),currencyId = deliveryPriceCurrency.toInt() )
+            stateController.successStateAUD("تمت   بنجاح")
+            isShowUpdateDeliveryPrice = false
+        }
+    }
+    private fun updateServiceAccount(password:String) {
+        stateController.startAud()
+        val body = builderForm4()
+        if (uriServiceAccount != null){
+            val requestBodyIcon = object : RequestBody() {
+                val mediaType = "json".toMediaTypeOrNull()
+                override fun contentType(): MediaType? {
+                    return mediaType
+                }
+
+                override fun writeTo(sink: BufferedSink) {
+                    contentResolver.openInputStream(uriServiceAccount!!)?.use { input ->
+                        val buffer = ByteArray(4096)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            sink.write(buffer, 0, bytesRead)
+                        }
+                    }
+                }
+            }
+            body.addFormDataPart("jsonService", "file1.jpg", requestBodyIcon)
+        }
+        body.addFormDataPart("passwordService",password)
+
+//            .build()
+        requestServer.request2(body.build(), "updateStoreServiceAccount", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            uriServiceAccount = null
+            stateController.successStateAUD("تمت   بنجاح")
+        }
+    }
+    fun readCurrencies() {
+        stateController.startAud()
+        //
+        val body = builderForm4()
+            .addFormDataPart("d", "e")
+            .build()
+
+        requestServer.request2(body, "getCurrencies", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { it ->
+            currencies = MyJson.IgnoreUnknownKeys.decodeFromString(
+                it
+            )
+            stateController.successStateAUD()
+        }
+    }
+
+
+    var isShowSelectDate by mutableStateOf(false)
+    var selectedStoreTime by mutableStateOf<StoreTime2?>(null)
+    var selectedTime by mutableStateOf<String?>(null)
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun DatePickerModal(
+        onTimeSelected: (String) -> Unit // MutableState to hold the selected time
+    ) {
+        val datePickerState = rememberTimePickerState()
+
+        DatePickerDialog(
+            modifier = Modifier.padding(16.dp),
+            onDismissRequest = { isShowSelectDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeSelected("${datePickerState.hour}:${datePickerState.minute}")
+//                    selectedTime =
+//                    Log.e("sdsdh",datePickerState.hour.toString())
+                    Log.e("sdsdm",selectedTime!!)
+                    isShowSelectDate = false
+//                    if (datePickerState. != null){
+//                        if (isFrom)fromDate = convertMillisToDate(datePickerState.selectedDateMillis!!)
+//                        else
+//                            toDate = convertMillisToDate(datePickerState.selectedDateMillis!!)
+//                        isShowSelectDate = false
+//                    }
+
+//                    datePickerState.selectedDateMillis
+//                    onDateSelected(datePickerState.selectedDateMillis)
+//                    onDismiss()
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isShowSelectDate = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            TimePicker(state = datePickerState)
+        }
+    }
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun modalUpdateDeliveryPrice() {
+
+        ModalBottomSheet(
+            onDismissRequest = { isShowUpdateDeliveryPrice = false }) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 10.dp)
+            ) {
+                var currency by remember { mutableStateOf<Currency?>(null) }
+                var price by remember { mutableStateOf("") }
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    item {
+                        var price by remember { mutableStateOf("") }
+                        Card(Modifier.padding(8.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column {
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = price,
+                                        label = {
+                                            Text("السعر")
+                                        },
+                                        onValueChange = {
+                                            price = it
+                                        }
+                                    )
+
+                                    var expanded by remember { mutableStateOf(false) }
+                                    Card(Modifier.padding(8.dp)) {
+                                        Row(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(8.dp)
+                                                .clickable {
+                                                    if (currencies.isEmpty()) {
+                                                        readCurrencies()
+                                                    }
+                                                    expanded = !expanded
+                                                },
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(currency?.name ?: "اختر العملة")
+                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                        }
+                                        if (expanded)
+                                            currencies.forEach { item ->
+                                                DropdownMenuItem(onClick = {
+                                                    currency = item
+                                                    expanded = false // Close the dropdown after selection
+                                                }, text = {
+                                                    Text(item.name)
+                                                })
+                                            }
+
+                                    }
+                                    Button(
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                        onClick = {
+                                            if (currency!= null && price.isNotEmpty()){
+                                                ConfirmDialog(this@SettingsStoreActivity){
+                                                    updateDeliveryPrice(price,currency!!.id.toString())
+                                                }
+                                            }
+
+                                    }) {
+                                        Text("حفظ")
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+
+
+
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun modalUpdateStoreTime() {
+
+
+        ModalBottomSheet(
+            onDismissRequest = { isShowUpdateStoreTime = false }) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 10.dp)
+            ) {
+                var storeTime by remember { mutableStateOf(selectedStoreTime!!) }
+
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    item {
+                        Card(Modifier.padding(8.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+
+                                Column {
+
+                                    CustomCard2(modifierBox = Modifier.clickable {
+
+                                        showTimePicker {
+                                            storeTime= storeTime.copy(storeTime = storeTime.storeTime!!.copy(openAt = it)
+                                            )
+                                        }
+//                            selectedTime = null
+//                            isShowSelectDate = true
+                                    }) {
+                                        CustomRow {
+                                            Text("يفتح الساعة: " + formatTime(storeTime.storeTime!!.openAt)?.get(0)
+                                                .toString() )
+                                            Text(formatTime(storeTime.storeTime!!.openAt)?.get(1)
+                                                .toString()).toString()
+                                        }
+                                    }
+                                    CustomCard2(modifierBox = Modifier.clickable {
+                                        showTimePicker {
+                                            storeTime= storeTime.copy(storeTime = storeTime.storeTime!!.copy(closeAt = it)
+                                            )
+                                        }
+                                    }) {
+                                        CustomRow {
+                                            Text("يغلق الساعة: " + formatTime(storeTime.storeTime!!.closeAt)?.get(0)
+                                                .toString())
+                                            Text(formatTime(storeTime.storeTime!!.closeAt)?.get(1)
+                                                .toString())
+                                        }
+                                    }
+                                    CustomRow {
+                                        Text("مفتوح-مغلق")
+                                        Switch(
+                                            checked = storeTime.storeTime!!.isOpen == 1,
+                                            onCheckedChange = {
+                                                storeTime= storeTime.copy(storeTime = storeTime.storeTime!!.copy(isOpen = if (storeTime.storeTime!!.isOpen == 1) 0 else 1)
+                                                )
+                                            },
+                                            modifier = Modifier.padding(16.dp)
+                                        )
+                                    }
+
+
+                                    Button(
+                                        enabled = selectedStoreTime != storeTime,
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                        onClick = {
+                                            updateStoreTime(storeTime.storeTime!!.day.toString(),storeTime.storeTime)
+                                        }) {
+                                        Text("حفظ")
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+
+
+
+                }
+            }
+        }
+    }
+
+
+    private fun showTimePicker(
+        onSuccess: (String) -> Unit,
+    ) {
+         TimePickerDialog(this,{t,i,o->
+
+             val time = t.hour.toString()+":"+t.minute.toString()
+             Log.e("tttime",time)
+             onSuccess(time)
+
+         },24,50,false).show()
+
+    }
 }
+
+fun normalizeTimeInput(input: String): String {
+    val parts = input.split(":")
+
+    // If there is no colon, assume it's only the hour part and add ":00" for minutes
+    if (parts.size == 1) {
+        return "${parts[0].padStart(2, '0')}:00"
+    }
+
+    // If there's a colon but no minutes, assume ":00"
+    if (parts.size == 2 && parts[1].isEmpty()) {
+        return "${parts[0].padStart(2, '0')}:00"
+    }
+
+    // Ensure both parts have at least two digits
+    val hour = parts[0].padStart(2, '0')
+    val minute = parts[1].padStart(2, '0')
+
+    return "$hour:$minute"
+}
+fun formatTime(timeString:String): List<String>? {
+    val s =toLocalTime(timeString)
+    if (s != null)
+    return listOf(
+        s.format(DateTimeFormatter.ofPattern("hh:mm")),
+        detectAmPm(timeString).toString()
+    )
+    else return null
+
+}
+fun toLocalTime(timeString:String): LocalTime? {
+    val timeFormats = listOf(          // 24-hour format (e.g., "14:30")
+        DateTimeFormatter.ofPattern("hh:mm"),          // 12-hour format with AM/PM (e.g., "02:30 PM")
+        DateTimeFormatter.ofPattern("HH:mm"),            // 12-hour format without AM/PM (e.g., "02:30")
+//        DateTimeFormatter.ofPattern("HH:mm:ss"),         // 24-hour format with seconds (e.g., "14:30:00")
+//        DateTimeFormatter.ofPattern("hh:mm:ss a"),       // 12-hour format with AM/PM and seconds (e.g., "02:30:00 PM")
+//        DateTimeFormatter.ofPattern("HH:mm:ss.SSS"),     // Time with milliseconds (e.g., "14:30:00.123")
+//        DateTimeFormatter.ofPattern("hh:mm:ss a.SSS")    // 12-hour format with AM/PM, seconds, and milliseconds (e.g., "02:30:00 PM.123")
+    )
+
+    // Try each format and return the first valid LocalTime
+    for (formatter in timeFormats) {
+        try {
+            val s = normalizeTimeInput(timeString)
+            Log.e("rer",s)
+            return LocalTime.parse(s, formatter)
+        } catch (e: DateTimeParseException) {
+            // Ignore exception and try the next format
+        }
+    }
+
+    // If no valid time format was found
+    println("Invalid time format: $timeString")
+    return null
+
+}
+fun detectAmPm(timeString:String): String? {
+    try {
+        val time = toLocalTime(timeString)
+        if (time != null){
+            val hour = time.hour
+            Log.e("hourr",hour.toString())
+            Log.e("hourr",(hour < 12).toString())
+            return if (hour < 12) "صباحا" else "مساءا"
+        }
+
+    } catch (e: DateTimeParseException) {
+        // Continue to the next formatter
+    }
+    return null // Return null if no formatter succeeds
+
+}
+
+@Serializable
+data class SubscriptionModel(val id:Int,
+                             val points:Int,
+                             val name:String, val price:Double, val productId:String,
+                             val isPending:Boolean,)
+
+@Serializable
+data class StoreTime(val day:Int,val openAt:String, val closeAt:String, val isOpen:Int)
+@Serializable
+data class StoreTime2(val day:String, val storeTime: StoreTime?)
+
+@Serializable
+data class MyPurchase(val productId: String, val status:Int,val isAcked : Boolean, val token:String)

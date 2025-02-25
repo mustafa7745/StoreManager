@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Message
 import android.util.Log
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -20,10 +22,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -50,6 +54,7 @@ import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.fekraplatform.storemanger.R
+import com.fekraplatform.storemanger.application.MyApplication
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
@@ -105,6 +110,9 @@ fun MainCompose1(
             }
 
         }
+        if (stateController.isShowMessage.value) {
+            Toast.makeText(activity, stateController.message.value, Toast.LENGTH_SHORT).show()
+        }
         if (stateController.isLoadingRead.value) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
 
@@ -139,7 +147,8 @@ fun MainCompose2(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = padding).safeDrawingPadding(),
+            .padding(top = padding)
+            .safeDrawingPadding(),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -154,6 +163,10 @@ fun MainCompose2(
             stateController.isErrorAUD.value = false
             stateController.errorAUD.value = ""
         }
+        if (stateController.isShowMessage.value) {
+            Toast.makeText(activity, stateController.message.value, Toast.LENGTH_SHORT).show()
+        }
+
         content()
     }
 }
@@ -389,9 +402,10 @@ fun IconDelete(ids: List<Int> , onClick: () -> Unit) {
 
 
 @Composable
-fun CustomIcon(imageVector: ImageVector, border:Boolean=false, onClick: () -> Unit) {
+fun CustomIcon(imageVector: ImageVector, border:Boolean=false , tint :Color = Color.Black , onClick: () -> Unit) {
     IconButton(onClick = onClick) {
-        val modifier = if (border) Modifier.padding(8.dp)
+        val modifier = if (border) Modifier
+            .padding(8.dp)
             .border(
                 1.dp,
                 MaterialTheme.colorScheme.primary,
@@ -407,7 +421,8 @@ fun CustomIcon(imageVector: ImageVector, border:Boolean=false, onClick: () -> Un
         Icon(
             modifier = modifier,
             imageVector = imageVector,
-            contentDescription = ""
+            contentDescription = "",
+            tint = tint
         )
     }
 }
@@ -441,8 +456,12 @@ fun CustomIcon2(imageVector: ImageVector,
 
 @Composable
 fun CustomCard(modifierCard: Modifier = Modifier
-    .fillMaxWidth().padding(8.dp).border(1.dp, Color.Gray,
-        RoundedCornerShape(12.dp)),
+    .fillMaxWidth()
+    .padding(8.dp)
+    .border(
+        1.dp, Color.Gray,
+        RoundedCornerShape(12.dp)
+    ),
 
                modifierBox: Modifier ,
                content: @Composable() (BoxScope.() -> Unit)){
@@ -462,8 +481,12 @@ fun CustomCard(modifierCard: Modifier = Modifier
 }
 @Composable
 fun CustomCard2(modifierCard: Modifier = Modifier
-    .fillMaxWidth().padding(8.dp).border(1.dp, Color.Gray,
-        RoundedCornerShape(12.dp)),
+    .fillMaxWidth()
+    .padding(8.dp)
+    .border(
+        1.dp, Color.Gray,
+        RoundedCornerShape(12.dp)
+    ),
 
                modifierBox: Modifier ,
                content: @Composable() (ColumnScope.() -> Unit)){
@@ -487,7 +510,10 @@ fun CustomCard2(modifierCard: Modifier = Modifier
 
 @Composable
 fun CustomRow(content: @Composable() (RowScope.() -> Unit)){
-    Row  (Modifier.fillMaxWidth().padding(2.dp),
+    Row  (
+        Modifier
+            .fillMaxWidth()
+            .padding(2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
         ){
@@ -497,7 +523,10 @@ fun CustomRow(content: @Composable() (RowScope.() -> Unit)){
 }
 @Composable
 fun CustomRow2(content: @Composable() (RowScope.() -> Unit)){
-    Row  (Modifier.fillMaxWidth().padding(5.dp),
+    Row  (
+        Modifier
+            .fillMaxWidth()
+            .padding(5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start
     ){
@@ -554,3 +583,96 @@ fun MyHeader(onBack:()->Unit,otherSide:@Composable ()->Unit = {},content: @Compo
         }
     }
 }
+
+@Composable
+fun ConfirmationDialog(onDismiss:()->Unit,onConfirm: () -> Unit) {
+    // Step 1: State to show/hide the dialog
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Step 2: Handle the actions when buttons are clicked
+//    val onConfirm = {
+//        showDialog = false
+//        // Handle your "Yes" action here
+//    }
+
+    val onDismiss = {
+        showDialog = false
+        // Handle your "No" action here
+    }
+
+    // Step 3: Button to show the dialog
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize()
+    ) {
+        Button(
+            onClick = { showDialog = true },
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text("Show Confirmation Dialog")
+        }
+
+        // Step 4: Confirmation Dialog
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },  // Handle dismiss by tapping outside
+                title = { Text("Confirm Action") },
+                text = { Text("Are you sure you want to proceed?") },
+                confirmButton = {
+                    Button(
+                        onClick = onConfirm
+                    ) {
+                        Text("Yes")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = {
+//                            ConfirmationDialog(onDismiss:()->Unit,onConfirm: () -> Unit)
+                        }
+                    ) {
+                        Text("No")
+                    }
+                }
+            )
+        }
+    }
+}
+    fun ConfirmDialog(
+        context: Context,
+        withTextField: Boolean = true,
+        onSuccess: (data: String) -> Unit,
+    ) {
+        val s = android.app.AlertDialog.Builder(context)
+
+            .setTitle("Hello")
+            .setMessage("Message")
+
+            .setNegativeButton("Cencel",
+                { di, i ->
+                    Log.e("ffrrf", "yes")
+                }
+            )
+        val editText = EditText(context)
+        if (withTextField) {
+
+            editText.hint = "Enter text here"  // You can set a hint for the EditText
+
+            // Create a layout to add the EditText inside it
+            val layout = LinearLayout(context)
+            layout.orientation = LinearLayout.VERTICAL
+            layout.addView(editText)
+            s.setView(layout)
+        }
+        s.setPositiveButton("Ok", { di, i ->
+            val userInput = editText.text.toString().trim()
+            Log.e("ffrrf", "yes")
+            onSuccess(userInput)
+            Log.e("ffrrfse", userInput)
+        })
+
+        s.show()
+
+    }
+

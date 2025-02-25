@@ -2,6 +2,7 @@ package com.fekraplatform.storemanger.shared
 
 import GetStorage
 import android.util.Log
+import com.fekraplatform.storemanger.activities.RemoteConfigModel
 import com.fekraplatform.storemanger.activities.SingletonHome.home
 import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
 import com.fekraplatform.storemanger.activities.SingletonHome.stateController
@@ -24,7 +25,7 @@ class ServerConfig {
     fun getDate(): LocalDateTime? {
         return (LocalDateTime.parse(getStorage.getData(dateKey)))
     }
-    fun getRemoteConfig(): VarRemoteConfig {
+    fun getRemoteConfig(): RemoteConfigModel {
         return MyJson.IgnoreUnknownKeys.decodeFromString(getStorage.getData(remoteConfig))
     }
     fun isSetRemoteConfig():Boolean{

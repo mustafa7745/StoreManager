@@ -41,6 +41,7 @@ import com.fekraplatform.storemanger.models.CustomOption
 import com.fekraplatform.storemanger.models.PageModel
 import com.fekraplatform.storemanger.models.UserInfo
 import com.fekraplatform.storemanger.shared.AToken
+import com.fekraplatform.storemanger.shared.ConfirmDialog
 import com.fekraplatform.storemanger.shared.CustomCard
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomImageView1
@@ -159,7 +160,10 @@ class StoreNotificationsActivity : ComponentActivity() {
                         Button(
                             modifier = Modifier.fillMaxWidth().padding(8.dp),
                             onClick = {
-                                addNotification(title,description)
+                                ConfirmDialog(this@StoreNotificationsActivity) {
+                                    addNotification(it,title,description)
+                                }
+
                             }) {
                             Text("ارسال")
                         }
@@ -223,12 +227,13 @@ class StoreNotificationsActivity : ComponentActivity() {
             stateController.successStateAUD()
         }
     }
-    private fun addNotification(title:String,description:String) {
+    private fun addNotification(password:String,title:String,description:String) {
         stateController.startAud()
         val body = builderForm3()
             .addFormDataPart("appId",CustomSingleton.selectedStore!!.app!!.id.toString())
             .addFormDataPart("title",title)
             .addFormDataPart("description",description)
+            .addFormDataPart("passwordService",password)
             .build()
 
         requestServer.request2(body, "addNotification", { code, fail ->

@@ -15,7 +15,7 @@ android {
         applicationId = "com.fekraplatform.storemanger"
         minSdk = 23
         targetSdk = 35
-        versionCode = 1
+        versionCode = 19
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -23,7 +23,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -81,5 +81,9 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 //    implementation(libs.firebase.admin)
+
+    val billing_version = "7.1.1"
+
+    implementation("com.android.billingclient:billing:$billing_version")
 
 }

@@ -1,7 +1,11 @@
 package com.fekraplatform.storemanger.activities
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -10,8 +14,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,19 +29,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -44,91 +53,200 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.shared.AToken
-import com.fekraplatform.storemanger.shared.AppInfoMethod
 import com.fekraplatform.storemanger.shared.CustomCard2
-import com.fekraplatform.storemanger.shared.CustomSingleton
-import com.fekraplatform.storemanger.shared.MainCompose2
+import com.fekraplatform.storemanger.shared.CustomIcon2
+import com.fekraplatform.storemanger.shared.MainCompose1
+import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.VarRemoteConfig
 import com.fekraplatform.storemanger.shared.builderForm
+import com.fekraplatform.storemanger.shared.builderForm2
+import com.fekraplatform.storemanger.storage.MyAppStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
-import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.ktx.messaging
-import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import java.util.Locale
 
+
+private const val s = "الرقم السري"
 
 class LoginActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
-    private var countryList = listOf(
-        Country("اليمن", "Yemen", "967"),
-        Country("السعودية", "Saudi Arabia", "966"),
-        Country("مصر", "Egypt", "20"),
-        Country("الكويت", "Kuwait", "965"),
-        Country("البحرين", "Bahrain", "973"),
-        Country("عمان", "Oman", "968"),
-        Country("الأردن", "Jordan", "962"),
-        Country("لبنان", "Lebanon", "961"),
-        Country("العراق", "Iraq", "964"),
-        Country("سوريا", "Syria", "963"),
-        Country("فلسطين", "Palestine", "970"),
-        Country("دولة الإمارات", "United Arab Emirates", "971"),
-        Country("قطر", "Qatar", "974"),
-        Country("الولايات المتحدة", "United States", "1"),
-        Country("كندا", "Canada", "1"),
-        Country("المملكة المتحدة", "United Kingdom", "44"),
-        Country("أستراليا", "Australia", "61"),
-        Country("الهند", "India", "91"),
-        Country("ألمانيا", "Germany", "49"),
-        Country("فرنسا", "France", "33"),
-        Country("البرازيل", "Brazil", "55"),
-        Country("المكسيك", "Mexico", "52"),
-        Country("اليابان", "Japan", "81"),
-        Country("الصين", "China", "86"),
-        Country("روسيا", "Russia", "7"),
-        Country("إيطاليا", "Italy", "39"),
-        Country("إسبانيا", "Spain", "34"),
-        Country("كوريا الجنوبية", "South Korea", "82"),
-        Country("تركيا", "Turkey", "90"),
-        Country("الأرجنتين", "Argentina", "54"),
-        Country("جنوب أفريقيا", "South Africa", "27"),
-        Country("كولومبيا", "Colombia", "57"),
-        Country("السويد", "Sweden", "46"),
-        Country("سويسرا", "Switzerland", "41"),
-        Country("البرتغال", "Portugal", "351"),
-        Country("النمسا", "Austria", "43"),
-        Country("اليونان", "Greece", "30"),
-        Country("نيوزيلندا", "New Zealand", "64"),
-
-
-    )
-    var selectedCountryCode by mutableStateOf(countryList.first())
+    private var countryList  = emptyList<Country>()
+    val myAppStorage = MyAppStorage()
+//    listOf(
+//        Country("اليمن", "Yemen", "967"),
+//        Country("السعودية", "Saudi Arabia", "966"),
+//        Country("مصر", "Egypt", "20"),
+//        Country("الكويت", "Kuwait", "965"),
+//        Country("البحرين", "Bahrain", "973"),
+//        Country("عمان", "Oman", "968"),
+//        Country("الأردن", "Jordan", "962"),
+//        Country("لبنان", "Lebanon", "961"),
+//        Country("العراق", "Iraq", "964"),
+//        Country("سوريا", "Syria", "963"),
+//        Country("فلسطين", "Palestine", "970"),
+//        Country("دولة الإمارات", "United Arab Emirates", "971"),
+//        Country("قطر", "Qatar", "974"),
+//        Country("الولايات المتحدة", "United States", "1"),
+//        Country("كندا", "Canada", "1"),
+//        Country("المملكة المتحدة", "United Kingdom", "44"),
+//        Country("أستراليا", "Australia", "61"),
+//        Country("الهند", "India", "91"),
+//        Country("ألمانيا", "Germany", "49"),
+//        Country("فرنسا", "France", "33"),
+//        Country("البرازيل", "Brazil", "55"),
+//        Country("المكسيك", "Mexico", "52"),
+//        Country("اليابان", "Japan", "81"),
+//        Country("الصين", "China", "86"),
+//        Country("روسيا", "Russia", "7"),
+//        Country("إيطاليا", "Italy", "39"),
+//        Country("إسبانيا", "Spain", "34"),
+//        Country("كوريا الجنوبية", "South Korea", "82"),
+//        Country("تركيا", "Turkey", "90"),
+//        Country("الأرجنتين", "Argentina", "54"),
+//        Country("جنوب أفريقيا", "South Africa", "27"),
+//        Country("كولومبيا", "Colombia", "57"),
+//        Country("السويد", "Sweden", "46"),
+//        Country("سويسرا", "Switzerland", "41"),
+//        Country("البرتغال", "Portugal", "351"),
+//        Country("النمسا", "Austria", "43"),
+//        Country("اليونان", "Greece", "30"),
+//        Country("نيوزيلندا", "New Zealand", "64"),
+//
+//
+//    )
+    var selectedCountryCode by mutableStateOf<Country?>(null)
     var isShowSelecetCountryCode by mutableStateOf(false)
+
+    var languages by mutableStateOf<List<Language>>(emptyList())
+
+
+
+    @Composable
+    fun DropDownLanguages() {
+
+
+        val isDropDownExpanded = remember {
+            mutableStateOf(false)
+        }
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+
+            Box {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth()
+
+                ) {
+                    Card(
+                        colors  = CardDefaults.cardColors(
+                            containerColor =Color.White
+                        ),
+                        modifier = Modifier
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary,
+                                RoundedCornerShape(
+                                    16.dp
+                                )
+                            )
+                            .clip(
+                                RoundedCornerShape(
+                                    16.dp
+                                )
+                            )
+                    ){
+                        Box (
+                            modifier = Modifier.clickable {
+//                                isDropDownExpanded.value = true
+                                isDropDownExpanded.value = true
+                            }
+
+
+                        ) {
+                            Row ( horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                                ,
+                            )
+                            {
+                                CustomIcon2(Icons.Default.KeyboardArrowDown) {   isDropDownExpanded.value = true}
+                                val lang = languages.find { it.code == getAppLanguage(this@LoginActivity) }
+                                Log.e("lannn",getAppLanguage(this@LoginActivity))
+//                                Log.e("lannng",Locale.get)
+                                Text(lang?.name ?: languages.find { it.code == "en" }!!.name,Modifier.padding(8.dp))
+                            }
+                        }
+                    }
+
+                }
+                DropdownMenu(
+                    expanded = isDropDownExpanded.value,
+                    onDismissRequest = {
+                        isDropDownExpanded.value = false
+                    }) {
+
+
+
+                    languages.forEachIndexed { index, language ->
+                        DropdownMenuItem(text = {
+                            Row {
+                                Text(text = language.name)
+                            }
+                        },
+                            onClick = {
+                                myAppStorage.setLang(language)
+                                setLocale(this@LoginActivity,language.code)
+                                recreate()
+//                                isDropDownExpanded.value = false
+//                                read (listOf(language.id).toString()){
+//                                    selectedCustomOption = language
+//                                }
+                            })
+                    }
+                }
+            }
+
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        getLoginConfiguration()
+
         enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
-                MainCompose2(
-                    0.dp, stateController, this,
+                MainCompose1(
+                    0.dp, stateController, this,{
+
+                        getLoginConfiguration()
+                    }
                 ) {
                     var password by remember { mutableStateOf("") }
                     var phone by remember { mutableStateOf("") }
@@ -153,10 +271,15 @@ class LoginActivity : ComponentActivity() {
                                         .padding(bottom = 16.dp)
                                 )
 
+                                DropDownLanguages()
+                                HorizontalDivider(Modifier.fillMaxWidth().padding(16.dp))
+//                                Row (Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center){
+//
+//                                }
 
                                 // Heading
                                 Text(
-                                    text = "تسجيل الدخول",
+                                    text = getString(R.string.login),
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(bottom = 24.dp)
@@ -164,33 +287,37 @@ class LoginActivity : ComponentActivity() {
 
 
 
-                                CompositionLocalProvider(LocalTextStyle provides TextStyle(textDirection = TextDirection.Ltr)){
+                                CompositionLocalProvider(LocalLayoutDirection provides  LayoutDirection.Ltr){
                                     OutlinedTextField(
 //                                    textDirection = TextDirection.Ltr,
-                                                value = phone,
+                                        value = phone,
                                         onValueChange = {
                                             phone = it
 //                                        isValidPhone = it.matches(Regex("^7[0|1|3|7|8][0-9]{7}$"))
                                         },
+                                        maxLines = 1,
 
-                                        label = { Text(text = "رقم الهاتف") },
-                                        trailingIcon = {
+                                        label = { Text(text = stringResource(R.string.Phonenumber)) },
+                                        leadingIcon = {
                                             Row (
                                                 verticalAlignment = Alignment.CenterVertically,
-                                               modifier =  Modifier.padding(4.dp).clickable {
-                                                isShowSelecetCountryCode = true
-                                            }){
-
-//                                                VerticalDivider(Modifier.padding(8.dp))
-                                                Text("+"+selectedCountryCode.code )
+                                               modifier = Modifier
+                                                   .padding(2.dp)
+                                                   .clickable {
+                                                       isShowSelecetCountryCode = true
+                                                   }){
                                                 Icon(Icons.Default.ArrowDropDown, contentDescription = "choose country")
+//                                                VerticalDivider(Modifier.padding(8.dp))
+                                                Text("+"+selectedCountryCode!!.code )
+
                                             }
 
                                         },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(bottom = 16.dp),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                       textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr)
                                     )
                                 }
 
@@ -199,7 +326,8 @@ class LoginActivity : ComponentActivity() {
                                     onValueChange = {
                                         password = it
                                                     },
-                                    label = { Text(text = "الرقم السري") },
+                                    maxLines = 1,
+                                    label = { Text(text = stringResource(R.string.password)) },
                                     suffix = {
 //                            Icon(
 //                                modifier = Modifier.padding(5.dp),
@@ -236,7 +364,7 @@ class LoginActivity : ComponentActivity() {
                                             .padding(5.dp)
                                             .fillMaxWidth()
                                     ) {
-                                        Text(text = "دخول")
+                                        Text(text = stringResource(R.string.Go))
                                     }
                                     // Error Message
                                 }
@@ -248,33 +376,35 @@ class LoginActivity : ComponentActivity() {
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    var t = stringResource(R.string.donthavaccount)
 
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
-                                        text = "ليس لدي حساب",
+                                        text = t,
                                         fontSize = 12.sp
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
+                                    t = stringResource(R.string.register)
                                     Text(
-                                        text = "اشتراك",
+                                        text = t,
                                         color = Color.Blue,
                                         fontSize = 14.sp,
                                         modifier = Modifier.clickable {
-                                            intentFunWhatsapp("اشتراك")
+                                            intentFunWhatsapp(t)
 //                                            showDialog.value = true
                                         }
                                     )
                                 }
+                                val t = stringResource(R.string.forgetpassword)
                                 Text(
-                                    text = "نسيت كلمة المرور؟",
+
+                                    text =t,
                                     color = Color.Red,
                                     fontSize = 10.sp,
                                     modifier = Modifier
                                         .padding(20.dp)
                                         .clickable {
-                                            intentFunWhatsapp("نسيت كلمة المرور")
-//                                            showDialogResetPassword.value = true
-//                                intentFunWhatsappForgetPassword()
+                                            intentFunWhatsapp(t)
                                         }
                                 )
 
@@ -293,7 +423,7 @@ class LoginActivity : ComponentActivity() {
                                 ) {
                                     Row {
                                         Text(
-                                            text = "من خلال تسجيل الدخول او الاشتراك فانك توافق على ",
+                                            text = stringResource(R.string.acceptLogin),
                                             fontSize = 9.sp
                                         )
                                     }
@@ -307,11 +437,11 @@ class LoginActivity : ComponentActivity() {
                                     ) {
                                         Text(
 
-                                            text = "سياسة الاستخدام", color = Color.Blue, fontSize = 9.sp
+                                            text = stringResource(R.string.policyUse), color = Color.Blue, fontSize = 9.sp
                                         )
                                         Text(text = " و ", fontSize = 9.sp)
                                         Text(
-                                            text = "شروط الخدمة ", color = Color.Blue, fontSize = 9.sp
+                                            text = stringResource(R.string.termSeivec), color = Color.Blue, fontSize = 9.sp
                                         )
 
                                     }
@@ -370,7 +500,7 @@ class LoginActivity : ComponentActivity() {
     private fun login(token:String,phone:String,password:String) {
         stateController.startAud()
         val body = builderForm(token)
-            .addFormDataPart("countryCode", selectedCountryCode.code)
+            .addFormDataPart("countryCode", selectedCountryCode!!.code)
             .addFormDataPart("phone",phone)
             .addFormDataPart("password",password)
             .build()
@@ -381,6 +511,26 @@ class LoginActivity : ComponentActivity() {
         ){it->
            AToken().setAccessToken(it)
            gotoDashboard()
+        }
+    }
+
+    private fun getLoginConfiguration() {
+        stateController.startRead()
+        val body = builderForm2()
+
+        requestServer.request2(body.build(),"getLoginConfiguration",{code,fail->
+            stateController.errorStateRead(fail)
+        }
+        ){it->
+            val result:LoginConfiguration = MyJson.IgnoreUnknownKeys.decodeFromString(it)
+
+            languages = result.languages
+            countryList = result.countries
+
+           selectedCountryCode =  countryList.first()
+            stateController.successState()
+//            AToken().setAccessToken(it)
+//            gotoDashboard()
         }
     }
     private fun intentFunWhatsapp(message: String): Boolean {
@@ -403,5 +553,46 @@ class LoginActivity : ComponentActivity() {
             return false
         }
     }
-    data class Country(val nameAr: String, val nameEn: String, val code: String)
+
+
+}
+@Serializable
+data class LoginConfiguration (val countries:List<Country>,val languages: List<Language>)
+@Serializable
+data class Language(val name:String,val code: String)
+@Serializable
+data class Country(val nameAr: String, val nameEn: String, val code: String)
+fun getAppLanguage(context: Context): String {
+    val configuration = context.resources.configuration
+
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        // For API 24 and above, use configuration.locales
+        configuration.locales.get(0).language
+    } else {
+        // For API 23 and below, use configuration.locale (deprecated in API 24+)
+        @Suppress("DEPRECATION")
+        configuration.locale.language
+    }
+}
+
+//fun setLocale(context: Context, language: String): Context {
+//    val locale = Locale(language)
+//    Locale.setDefault(locale)
+//
+//    val resources = context.resources
+//    val configuration = Configuration(resources.configuration)
+//    configuration.setLocale(locale)
+//
+//    // Update the context with the new configuration
+//    return context.createConfigurationContext(configuration)
+//}
+
+fun setLocale(activity: Activity, languageCode: String) {
+    val locale = Locale(languageCode)
+    Locale.setDefault(locale)
+    val resources = activity.resources
+    val configuration = resources.configuration
+    configuration.setLocale(locale)
+    resources.updateConfiguration(configuration, resources.displayMetrics)
+
 }

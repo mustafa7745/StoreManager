@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Phone
@@ -70,6 +74,7 @@ import com.fekraplatform.storemanger.models.Order
 import com.fekraplatform.storemanger.models.Store
 import com.fekraplatform.storemanger.shared.AToken
 import com.fekraplatform.storemanger.shared.AppInfoMethod
+import com.fekraplatform.storemanger.shared.ConfirmationDialog
 import com.fekraplatform.storemanger.shared.CustomCard
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
@@ -80,6 +85,7 @@ import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MainCompose2
+import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
@@ -101,6 +107,7 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import java.nio.file.WatchEvent
 import java.time.Duration
+import java.time.LocalDateTime
 
 
 class AdsActivity : ComponentActivity() {
@@ -112,9 +119,10 @@ class AdsActivity : ComponentActivity() {
 
     var uriImage by mutableStateOf<Uri?>(null)
     var isShowAddAds by mutableStateOf(false)
+    var isShowConfirmation by mutableStateOf(false)
 //    var productId by mutableStateOf(false)
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SingletonHome.setStateController1(stateController)
@@ -124,40 +132,44 @@ class AdsActivity : ComponentActivity() {
         SingletonHome.initHome(CustomSingleton.getCustomStoreId().toString())
 
 //        stateController.successState()
+        enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
+//                if (isShowConfirmation) ConfirmationDialog {  }
                 MainCompose1(
                     0.dp, stateController, this,{
                         SingletonHome.read(CustomSingleton.getCustomStoreId().toString())
                     }
 
                 ) {
-                    CustomCard(modifierBox = Modifier) {
-                        CustomRow2 {
-                            CustomIcon(Icons.AutoMirrored.Default.ArrowBack, border = true) {
-//                                backHandler()
-                            }
-                            Row {
-                                Text("الاعلانات")
-//                                if (page != pages.first()){
-//                                    Text(" | ")
-//                                    Text(page.pageName)
-//                                }
-                            }
-                        }
-                    }
                     val carouselState = rememberCarouselState { SingletonHome.home.value!!.ads.size }
                     LazyColumn(
-                        modifier = Modifier
+                        modifier = Modifier.safeDrawingPadding()
                             .fillMaxSize()
-                            .padding(16.dp),
+                            .padding(8.dp),
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ){
+                        stickyHeader {
+                            MyHeader({
+                                finish()
+                            },{
+                                if (!CustomSingleton.isSharedStore()){
+                                    CustomIcon(Icons.Default.Add,true) {
+                                        getContentImage.launch("image/jpeg")
+//                                isShowAddCatgory.value = true
+                                    }
+                                }
+
+                            }) {
+                                Text("الاعلانات")
+                            }
+                        }
                         item {
                             HorizontalMultiBrowseCarousel(state = carouselState,300.dp, itemSpacing = 8.dp, modifier = Modifier.padding(8.dp).height(205.dp)) {page->
                                 val ads =SingletonHome.home.value!!.ads[page]
-                                val diff = Duration.between(ads.expireAt, getCurrentDate()).toSeconds()
+                                val time = LocalDateTime.parse(ads.expireAt.replace(" ","T"))
+                                val diff = Duration.between(getCurrentDate(),time ).toDays()
                                 Box {
                                     CustomImageViewUri(CustomSingleton.remoteConfig.BASE_IMAGE_URL+"stores/ads/"+ ads.image,Modifier.fillMaxSize().clickable {
 //                                    if (ads.pid!= null){
@@ -175,31 +187,21 @@ class AdsActivity : ComponentActivity() {
                                     } .maskClip(MaterialTheme.shapes.extraLarge).background(Color.Red),
                                         contentScale = ContentScale.Crop
                                         )
-                                    CustomIcon(Icons.Default.Delete) {
+                                    CustomIcon(Icons.Default.Delete, tint = Color.Red) {
                                         deleteAds(ads.id.toString())
+                                    }
+                                    if (diff >= 0)
+                                    Text("متبقي " + if(diff.toInt() == 0 ) "هذا اليوم" else diff, modifier = Modifier.align(Alignment.TopCenter))
+                                    else{
+                                        Text("تجديد", modifier = Modifier.align(Alignment.TopCenter).clickable {
+                                            upgradeAds(ads.id)
+                                        })
                                     }
                                 }
                             }
                         }
 
-                        item {
-                            Card(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(100.dp)
-                                    .padding(8.dp)
-                            ) {
-                                Box (
-                                    Modifier
-                                        .fillMaxSize()
-                                        .clickable {
-                                            getContentImage.launch("image/jpeg")
-                                        }
-                                ){
-                                    Text("+", modifier = Modifier.align(Alignment.Center))
-                                }
-                            }
-                        }
+
                     }
 
                     if (isShowAddAds) modalAddMyCategory()
@@ -268,6 +270,37 @@ class AdsActivity : ComponentActivity() {
         if (uri != null){
             uriImage = uri
             isShowAddAds = true
+        }
+    }
+    private fun upgradeAds(adsId: Int) {
+        stateController.startAud()
+
+        val body = builderForm4()
+            .addFormDataPart("adsId",adsId.toString())
+
+
+        requestServer.request2(body.build(),"updateAds",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+
+            val expireAt:StringResult  =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
+
+            var newAds = SingletonHome.home.value!!.ads.toMutableList()
+
+            newAds = newAds.map {
+                if (adsId == it.id){
+                    it.copy(expireAt = expireAt.result)
+                }else it
+            }.toMutableList()
+            SingletonHome.home.value = SingletonHome.home.value!!.copy(
+                ads = newAds
+            )
+
+            uriImage = null
+//            isShowAddAds = false
+            stateController.successStateAUD("تمت   بنجاح")
+
         }
     }
     private fun addAds(days:Int,producyId: String? = null) {

@@ -3,6 +3,7 @@ package com.fekraplatform.storemanger.shared
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.fekraplatform.storemanger.activities.RemoteConfigModel
 import com.fekraplatform.storemanger.models.CustomPrice
 import com.fekraplatform.storemanger.models.ProductView
 import com.fekraplatform.storemanger.models.Store
@@ -11,7 +12,7 @@ import com.fekraplatform.storemanger.models.StoreProduct
 import java.time.LocalDateTime
 
 object CustomSingleton {
-    lateinit var remoteConfig: VarRemoteConfig
+    lateinit var remoteConfig: RemoteConfigModel
     fun getStoreLogo(): String {
         return remoteConfig.BASE_IMAGE_URL + remoteConfig.SUB_FOLDER_STORE_LOGOS + selectedStore!!.logo
     }

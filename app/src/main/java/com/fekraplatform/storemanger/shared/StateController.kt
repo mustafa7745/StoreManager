@@ -1,5 +1,8 @@
 package com.fekraplatform.storemanger.shared
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class StateController {
     val isLoadingRead = mutableStateOf(false)
@@ -11,6 +14,9 @@ class StateController {
     val isErrorAUD = mutableStateOf(false)
     val errorAUD = mutableStateOf("")
     val successAUD = mutableStateOf("")
+
+    val isShowMessage = mutableStateOf(false)
+    val message = mutableStateOf("")
 
     fun startRead() {
         isErrorRead.value = false
@@ -54,5 +60,16 @@ class StateController {
         val message = successAUD.value;
         successAUD.value = ""
         return message
+    }
+    fun showMessage(m: String){
+
+        GlobalScope.launch {
+            isShowMessage.value = true
+            message.value = m
+            delay(500)
+            isShowMessage.value = false
+            message.value = ""
+
+        }
     }
 }
