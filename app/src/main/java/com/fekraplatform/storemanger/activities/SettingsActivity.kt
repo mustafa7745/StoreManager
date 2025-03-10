@@ -6,50 +6,31 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.models.PageModel
 import com.fekraplatform.storemanger.models.UserInfo
 import com.fekraplatform.storemanger.shared.AToken
-import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomImageView1
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
@@ -59,7 +40,7 @@ import com.fekraplatform.storemanger.shared.MainCompose2
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 
 class SettingsActivity : ComponentActivity() {
@@ -87,7 +68,7 @@ class SettingsActivity : ComponentActivity() {
             StoreMangerTheme  {
                 BackHand()
                 Column(Modifier.safeDrawingPadding()) {
-                    CustomCard(modifierBox = Modifier) {
+                    CustomCard2(modifierBox = Modifier) {
                         CustomRow2 {
                             CustomIcon(Icons.AutoMirrored.Default.ArrowBack, border = true) {
                                 backHandler()
@@ -118,7 +99,7 @@ class SettingsActivity : ComponentActivity() {
     @Composable
     private fun UserProfile() {
         if (userInfo != null){
-            CustomCard(modifierBox = Modifier
+            CustomCard2(modifierBox = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)) {
                 Row(Modifier.fillMaxSize()) {
@@ -149,7 +130,7 @@ class SettingsActivity : ComponentActivity() {
 
     @Composable
     private fun SettingsList() {
-        CustomCard(modifierBox = Modifier.clickable { page = pages[1]}) {
+        CustomCard2(modifierBox = Modifier.clickable { page = pages[1]}) {
             CustomRow {
                 Text("الملف الشخصي")
                 CustomImageViewUri(modifier = Modifier.size(30.dp), imageUrl = R.drawable.uinfo)
@@ -157,7 +138,7 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        CustomCard(modifierBox = Modifier.clickable { }) {
+        CustomCard2(modifierBox = Modifier.clickable { }) {
             CustomRow {
                 Text("اللغات")
                 CustomImageViewUri(
@@ -169,7 +150,7 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        CustomCard(modifierBox = Modifier.clickable { }) {
+        CustomCard2(modifierBox = Modifier.clickable { }) {
             CustomRow {
                 Text("التصميم")
                 CustomImageViewUri(
@@ -179,7 +160,7 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        CustomCard(modifierBox = Modifier.clickable {logout() }) {
+        CustomCard2(modifierBox = Modifier.clickable {logout() }) {
             CustomRow {
                 Text("تسجيل الخروج")
                 CustomImageViewUri(
@@ -205,7 +186,7 @@ class SettingsActivity : ComponentActivity() {
     ///
     private fun readUserProfile() {
         stateController.startAud()
-        val body = builderForm3().build()
+        val body = builderForm2().build()
 
         requestServer.request2(body, "getUserProfile", { code, fail ->
             stateController.errorStateAUD(fail)
@@ -221,7 +202,7 @@ class SettingsActivity : ComponentActivity() {
     }
     private fun logout() {
         stateController.startAud()
-        val body = builderForm3().build()
+        val body = builderForm2().build()
 
         requestServer.request2(body, "logout", { code, fail ->
             stateController.errorStateAUD(fail)

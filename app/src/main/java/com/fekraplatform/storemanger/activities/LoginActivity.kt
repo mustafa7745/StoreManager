@@ -3,7 +3,6 @@ package com.fekraplatform.storemanger.activities
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -74,171 +73,26 @@ import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.builderForm
-import com.fekraplatform.storemanger.shared.builderForm2
+import com.fekraplatform.storemanger.shared.builderForm0
+import com.fekraplatform.storemanger.shared.builderForm1
 import com.fekraplatform.storemanger.storage.MyAppStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.serialization.Serializable
 import java.util.Locale
 
-
-private const val s = "الرقم السري"
-
 class LoginActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
     private var countryList  = emptyList<Country>()
     val myAppStorage = MyAppStorage()
-//    listOf(
-//        Country("اليمن", "Yemen", "967"),
-//        Country("السعودية", "Saudi Arabia", "966"),
-//        Country("مصر", "Egypt", "20"),
-//        Country("الكويت", "Kuwait", "965"),
-//        Country("البحرين", "Bahrain", "973"),
-//        Country("عمان", "Oman", "968"),
-//        Country("الأردن", "Jordan", "962"),
-//        Country("لبنان", "Lebanon", "961"),
-//        Country("العراق", "Iraq", "964"),
-//        Country("سوريا", "Syria", "963"),
-//        Country("فلسطين", "Palestine", "970"),
-//        Country("دولة الإمارات", "United Arab Emirates", "971"),
-//        Country("قطر", "Qatar", "974"),
-//        Country("الولايات المتحدة", "United States", "1"),
-//        Country("كندا", "Canada", "1"),
-//        Country("المملكة المتحدة", "United Kingdom", "44"),
-//        Country("أستراليا", "Australia", "61"),
-//        Country("الهند", "India", "91"),
-//        Country("ألمانيا", "Germany", "49"),
-//        Country("فرنسا", "France", "33"),
-//        Country("البرازيل", "Brazil", "55"),
-//        Country("المكسيك", "Mexico", "52"),
-//        Country("اليابان", "Japan", "81"),
-//        Country("الصين", "China", "86"),
-//        Country("روسيا", "Russia", "7"),
-//        Country("إيطاليا", "Italy", "39"),
-//        Country("إسبانيا", "Spain", "34"),
-//        Country("كوريا الجنوبية", "South Korea", "82"),
-//        Country("تركيا", "Turkey", "90"),
-//        Country("الأرجنتين", "Argentina", "54"),
-//        Country("جنوب أفريقيا", "South Africa", "27"),
-//        Country("كولومبيا", "Colombia", "57"),
-//        Country("السويد", "Sweden", "46"),
-//        Country("سويسرا", "Switzerland", "41"),
-//        Country("البرتغال", "Portugal", "351"),
-//        Country("النمسا", "Austria", "43"),
-//        Country("اليونان", "Greece", "30"),
-//        Country("نيوزيلندا", "New Zealand", "64"),
-//
-//
-//    )
     var selectedCountryCode by mutableStateOf<Country?>(null)
     var isShowSelecetCountryCode by mutableStateOf(false)
-
     var languages by mutableStateOf<List<Language>>(emptyList())
-
-
-
-    @Composable
-    fun DropDownLanguages() {
-
-
-        val isDropDownExpanded = remember {
-            mutableStateOf(false)
-        }
-
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-
-            Box {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth()
-
-                ) {
-                    Card(
-                        colors  = CardDefaults.cardColors(
-                            containerColor =Color.White
-                        ),
-                        modifier = Modifier
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.primary,
-                                RoundedCornerShape(
-                                    16.dp
-                                )
-                            )
-                            .clip(
-                                RoundedCornerShape(
-                                    16.dp
-                                )
-                            )
-                    ){
-                        Box (
-                            modifier = Modifier.clickable {
-//                                isDropDownExpanded.value = true
-                                isDropDownExpanded.value = true
-                            }
-
-
-                        ) {
-                            Row ( horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                                ,
-                            )
-                            {
-                                CustomIcon2(Icons.Default.KeyboardArrowDown) {   isDropDownExpanded.value = true}
-                                val lang = languages.find { it.code == getAppLanguage(this@LoginActivity) }
-                                Log.e("lannn",getAppLanguage(this@LoginActivity))
-//                                Log.e("lannng",Locale.get)
-                                Text(lang?.name ?: languages.find { it.code == "en" }!!.name,Modifier.padding(8.dp))
-                            }
-                        }
-                    }
-
-                }
-                DropdownMenu(
-                    expanded = isDropDownExpanded.value,
-                    onDismissRequest = {
-                        isDropDownExpanded.value = false
-                    }) {
-
-
-
-                    languages.forEachIndexed { index, language ->
-                        DropdownMenuItem(text = {
-                            Row {
-                                Text(text = language.name)
-                            }
-                        },
-                            onClick = {
-                                myAppStorage.setLang(language)
-                                setLocale(this@LoginActivity,language.code)
-                                recreate()
-//                                isDropDownExpanded.value = false
-//                                read (listOf(language.id).toString()){
-//                                    selectedCustomOption = language
-//                                }
-                            })
-                    }
-                }
-            }
-
-        }
-    }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         getLoginConfiguration()
-
         enableEdgeToEdge()
         setContent {
             StoreMangerTheme {
@@ -439,7 +293,7 @@ class LoginActivity : ComponentActivity() {
 
                                             text = stringResource(R.string.policyUse), color = Color.Blue, fontSize = 9.sp
                                         )
-                                        Text(text = " و ", fontSize = 9.sp)
+                                        Text(text = " , ", fontSize = 9.sp)
                                         Text(
                                             text = stringResource(R.string.termSeivec), color = Color.Blue, fontSize = 9.sp
                                         )
@@ -459,7 +313,97 @@ class LoginActivity : ComponentActivity() {
             }
         }
     }
+    @Composable
+    fun DropDownLanguages() {
+        val isDropDownExpanded = remember {
+            mutableStateOf(false)
+        }
 
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+
+            Box {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth()
+
+                ) {
+                    Card(
+                        colors  = CardDefaults.cardColors(
+                            containerColor =Color.White
+                        ),
+                        modifier = Modifier
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary,
+                                RoundedCornerShape(
+                                    16.dp
+                                )
+                            )
+                            .clip(
+                                RoundedCornerShape(
+                                    16.dp
+                                )
+                            )
+                    ){
+                        Box (
+                            modifier = Modifier.clickable {
+//                                isDropDownExpanded.value = true
+                                isDropDownExpanded.value = true
+                            }
+
+
+                        ) {
+                            Row ( horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                                ,
+                            )
+                            {
+                                CustomIcon2(Icons.Default.KeyboardArrowDown) {   isDropDownExpanded.value = true}
+                                val lang = languages.find { it.code == getAppLanguage(this@LoginActivity) }
+                                Log.e("lannn",getAppLanguage(this@LoginActivity))
+//                                Log.e("lannng",Locale.get)
+                                Text(lang?.name ?: languages.find { it.code == "en" }!!.name,Modifier.padding(8.dp))
+                            }
+                        }
+                    }
+
+                }
+                DropdownMenu(
+                    expanded = isDropDownExpanded.value,
+                    onDismissRequest = {
+                        isDropDownExpanded.value = false
+                    }) {
+
+
+
+                    languages.forEachIndexed { index, language ->
+                        DropdownMenuItem(text = {
+                            Row {
+                                Text(text = language.name)
+                            }
+                        },
+                            onClick = {
+                                myAppStorage.setLang(language)
+                                setLocale(this@LoginActivity,language.code)
+                                recreate()
+//                                isDropDownExpanded.value = false
+//                                read (listOf(language.id).toString()){
+//                                    selectedCustomOption = language
+//                                }
+                            })
+                    }
+                }
+            }
+
+        }
+    }
     @Composable
     private fun DialogCountryCodes() {
         Dialog(onDismissRequest = { isShowSelecetCountryCode = false }) {
@@ -478,7 +422,7 @@ class LoginActivity : ComponentActivity() {
                             Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)) {
-                            Text(item.nameAr + " " + item.code + "+")
+                            Text(item.name + " " + item.code + "+")
                         }
                     }
 
@@ -499,7 +443,7 @@ class LoginActivity : ComponentActivity() {
     }
     private fun login(token:String,phone:String,password:String) {
         stateController.startAud()
-        val body = builderForm(token)
+        val body = builderForm1(token)
             .addFormDataPart("countryCode", selectedCountryCode!!.code)
             .addFormDataPart("phone",phone)
             .addFormDataPart("password",password)
@@ -513,10 +457,9 @@ class LoginActivity : ComponentActivity() {
            gotoDashboard()
         }
     }
-
     private fun getLoginConfiguration() {
         stateController.startRead()
-        val body = builderForm2()
+        val body = builderForm0()
 
         requestServer.request2(body.build(),"getLoginConfiguration",{code,fail->
             stateController.errorStateRead(fail)
@@ -553,15 +496,13 @@ class LoginActivity : ComponentActivity() {
             return false
         }
     }
-
-
 }
 @Serializable
 data class LoginConfiguration (val countries:List<Country>,val languages: List<Language>)
 @Serializable
 data class Language(val name:String,val code: String)
 @Serializable
-data class Country(val nameAr: String, val nameEn: String, val code: String)
+data class Country(val name: String, val code: String)
 fun getAppLanguage(context: Context): String {
     val configuration = context.resources.configuration
 
@@ -574,19 +515,6 @@ fun getAppLanguage(context: Context): String {
         configuration.locale.language
     }
 }
-
-//fun setLocale(context: Context, language: String): Context {
-//    val locale = Locale(language)
-//    Locale.setDefault(locale)
-//
-//    val resources = context.resources
-//    val configuration = Configuration(resources.configuration)
-//    configuration.setLocale(locale)
-//
-//    // Update the context with the new configuration
-//    return context.createConfigurationContext(configuration)
-//}
-
 fun setLocale(activity: Activity, languageCode: String) {
     val locale = Locale(languageCode)
     Locale.setDefault(locale)

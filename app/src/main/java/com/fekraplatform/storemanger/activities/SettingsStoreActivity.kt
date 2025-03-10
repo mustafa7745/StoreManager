@@ -1,13 +1,10 @@
 package com.fekraplatform.storemanger.activities
 
-import android.app.AlertDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.EditText
-import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -21,12 +18,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePickerDialog
@@ -35,6 +32,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -45,11 +44,14 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -65,10 +67,9 @@ import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.application.MyApplication
 import com.fekraplatform.storemanger.models.Currency
 import com.fekraplatform.storemanger.models.PageModel
-import com.fekraplatform.storemanger.shared.ConfirmDialog
-import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.models.StoreCurrency
+import com.fekraplatform.storemanger.shared.confirmDialog
 import com.fekraplatform.storemanger.shared.CustomCard2
-import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.CustomRow2
 import com.fekraplatform.storemanger.shared.CustomSingleton
@@ -77,7 +78,7 @@ import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.builderForm4
+import com.fekraplatform.storemanger.shared.builderForm3
 import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.storage.GoogleBillingStorage
 import com.fekraplatform.storemanger.storage.MyBilling
@@ -105,12 +106,14 @@ class SettingsStoreActivity : ComponentActivity() {
 //    lateinit var store: Store
 
     var file by mutableStateOf<String?>(null)
+    var storeCurrencies by mutableStateOf<List<StoreCurrency>>(emptyList())
+    var isShowAddCurrency by mutableStateOf(false)
 
     val pages = listOf(
         PageModel("",0),
         PageModel("شراء الاشتراكات",1),
-                PageModel("شراء النقاط",2),
-                        PageModel("أوقات الدوام",3)
+        PageModel("شراء النقاط",2),
+        PageModel("أوقات الدوام",3)
     )
     var page by mutableStateOf(pages.first())
 
@@ -207,64 +210,36 @@ class SettingsStoreActivity : ComponentActivity() {
 
                 }
                 if (isShowUpdateStoreTime) modalUpdateStoreTime()
-
                 if (isShowUpdateDeliveryPrice) modalUpdateDeliveryPrice()
+                if (isShowAddCurrency) modalShowCurrencyOfStore()
             }
         }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
     private fun LazyListScope.MainPage() {
-        stickyHeader {
-            Text("الرئيسية")
-            HorizontalDivider()
-        }
         item {
-            CustomCard(modifierBox = Modifier
-                .fillMaxSize()
-                .clickable {
-
-                }) {
-                CustomRow {
-                    Text("الموقع", Modifier.padding(8.dp))
-
-                    Button(onClick = {
-
-                        gotoStoreLocation()
-                    }) {
-                        Text(if (SelectedStore.store.value!!.latLng != null) "تعديل" else "اضافة")
-                    }
+            CustomCard2(modifierBox = Modifier) {
+                Column(Modifier.selectableGroup()) {
+                    Text("الرئيسية", modifier = Modifier.padding(14.dp), fontWeight = FontWeight.Bold)
+                    SettingItem("الموقع"){ gotoStoreLocation()}
+                    SettingItem("اوقات الدوام"){ page = pages[3]}
                 }
             }
         }
         item {
-            CustomCard(modifierBox = Modifier
-                .fillMaxSize()
-                .clickable {
-                    page = pages[3]
-                }) {
-                CustomRow {
-                    Text("اوقات الدوام", Modifier.padding(8.dp))
+            CustomCard2(modifierBox = Modifier) {
+                Column(Modifier.selectableGroup()) {
+                    Text("العملات والتسعير", modifier = Modifier.padding(14.dp), fontWeight = FontWeight.Bold)
+                    SettingItem("عملات المتجر"){getStoreCurrencies()}
+                    SettingItem("سعر التوصيل"){ isShowUpdateDeliveryPrice = true}
+                    SettingItem("اقل مبلغ يمكن طليه"){}
+                    SettingItem("توصيل مجاني للطلبات الاكبر من"){}
                 }
-            }
+                }
         }
-        item {
-            CustomCard(modifierBox = Modifier
-                .fillMaxSize()
-                .clickable {
 
-                    isShowUpdateDeliveryPrice = true
-                }) {
-                CustomRow {
-                    Text("سعر التوصيل", Modifier.padding(8.dp))
-                    Text(
-                        formatPrice(CustomSingleton.selectedStore!!.deliveryPrice.toString()),
-                        Modifier.padding(8.dp)
-                    )
-                    Text(CustomSingleton.selectedStore!!.currencyName, Modifier.padding(8.dp))
-                }
-            }
-        }
+
         stickyHeader {
             Text("الاشتراكات والنقاط")
             HorizontalDivider()
@@ -280,16 +255,16 @@ class SettingsStoreActivity : ComponentActivity() {
                     if (CustomSingleton.isPremiumStore()) {
                         Text("Premium", Modifier.padding(8.dp))
                     }
-//                    else {
-                        Button(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            onClick = {
+        //                    else {
+                    Button(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        onClick = {
                             isSubs = "1"
                             page = pages[1]
                         }) {
-                            Text("ترقية")
-                        }
-//                    }
+                        Text("ترقية")
+                    }
+        //                    }
                 }
                 CustomRow {
 
@@ -303,19 +278,19 @@ class SettingsStoreActivity : ComponentActivity() {
                         val diff = Duration.between(getCurrentDate(), time).toDays()
                         Text("الايام المتبقية", Modifier.padding(8.dp))
                         Text(diff.toString(), Modifier.padding(8.dp))
-//                        if (diff <= 5) {
-//                            Button(
-//                                modifier = Modifier.fillMaxWidth().padding(8.dp),
-//                                onClick = {
-//                                isSubs = "1"
-//                                page = pages[1]
-//                            }) {
-//                                Text("تجديد ")
-//                            }
-//                        } else {
-//
-//
-//                        }
+        //                        if (diff <= 5) {
+        //                            Button(
+        //                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+        //                                onClick = {
+        //                                isSubs = "1"
+        //                                page = pages[1]
+        //                            }) {
+        //                                Text("تجديد ")
+        //                            }
+        //                        } else {
+        //
+        //
+        //                        }
 
                     }
                 }
@@ -324,7 +299,7 @@ class SettingsStoreActivity : ComponentActivity() {
         if (CustomSingleton.isPremiumStore())
             if (CustomSingleton.selectedStore!!.app != null) {
                 item {
-                    CustomCard(modifierBox = Modifier
+                    CustomCard2(modifierBox = Modifier
                         .fillMaxSize()
                         .clickable {
 
@@ -338,12 +313,12 @@ class SettingsStoreActivity : ComponentActivity() {
 
 
                                 //                                            else{
-    //                                            Button(onClick = {
-    //
-    //                                            }) {
-    //                                                Text("ارسال طلب تصدير المتجر الى تطبيق")
-    //                                            }
-    //                                        }
+                                //                                            Button(onClick = {
+                                //
+                                //                                            }) {
+                                //                                                Text("ارسال طلب تصدير المتجر الى تطبيق")
+                                //                                            }
+                                //                                        }
                             }
                             CustomRow {
                                 Text("اعدادات الخدمة", Modifier.padding(8.dp))
@@ -392,7 +367,7 @@ class SettingsStoreActivity : ComponentActivity() {
 
         if (SelectedStore.store.value!!.typeId == 1)
             item {
-                CustomCard(modifierBox = Modifier
+                CustomCard2(modifierBox = Modifier
                     .fillMaxSize()
                     .clickable {
 
@@ -415,7 +390,7 @@ class SettingsStoreActivity : ComponentActivity() {
                 && SingletonHome.isEditMode.value
             ) {
                 item {
-                    CustomCard(modifierBox = Modifier
+                    CustomCard2(modifierBox = Modifier
                         .fillMaxSize()
                         .clickable {
                             SingletonHome.updateStoreConfig()
@@ -432,6 +407,28 @@ class SettingsStoreActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    @Composable
+    private fun SettingItem(text:String,onClick:()-> Unit) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clickable {
+                   onClick()
+                }
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        )
+        {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+        }
+        HorizontalDivider()
     }
 
     var storeTime by mutableStateOf(emptyList<StoreTime2>())
@@ -451,7 +448,7 @@ class SettingsStoreActivity : ComponentActivity() {
                     if (item.storeTime == null){
                         Button(onClick = {
                             updateStoreTime((index+1).toString(),null)
-//                        updatePoints(item.isPending,item.productId,item.purchaseToken)
+        //                        updatePoints(item.isPending,item.productId,item.purchaseToken)
                         }) {
                             Text("اضافة")
                         }
@@ -495,7 +492,7 @@ class SettingsStoreActivity : ComponentActivity() {
 
         if (myBillings.isNotEmpty()){
             itemsIndexed(myBillings) { index, item ->
-                CustomCard(modifierBox = Modifier
+                CustomCard2(modifierBox = Modifier
                     .fillMaxSize()
                     .clickable {
 
@@ -512,7 +509,7 @@ class SettingsStoreActivity : ComponentActivity() {
         }
 
         itemsIndexed(inAppProducts) { index, item ->
-            CustomCard(modifierBox = Modifier
+            CustomCard2(modifierBox = Modifier
                 .fillMaxSize()
                 .clickable {
 
@@ -525,7 +522,7 @@ class SettingsStoreActivity : ComponentActivity() {
                             .clickable {
                                 updatePoints(true,item.productId,"")
                             })
-//                    val myPurchase = myPurchases.find { it.productId == item.productId }
+        //                    val myPurchase = myPurchases.find { it.productId == item.productId }
 
                     Button(
                         enabled = !item.isPending,
@@ -537,21 +534,21 @@ class SettingsStoreActivity : ComponentActivity() {
                                 val p = productDetails.find { it.productId == item.productId }
                                 if (p != null) {
                                     launchPurchaseFlow(p)
-//                                    if (myPurchase == null)
-//
-//                                    else if (myPurchase.status == PurchaseState.PENDING) {
-//
-//                                    } else if (!myPurchase.isAcked) {
-//                                        acknowledgePurchase(myPurchase.token)
-//                                    }
-//                                    else if (myPurchase.isAcked) {
-//                                        updatePoints(MyJson.MyJson.encodeToString(listOf(myPurchase.productId))) {
-//                                            consumePurchases(myPurchase.token)
-//                                        }
-//                                    }
+        //                                    if (myPurchase == null)
+        //
+        //                                    else if (myPurchase.status == PurchaseState.PENDING) {
+        //
+        //                                    } else if (!myPurchase.isAcked) {
+        //                                        acknowledgePurchase(myPurchase.token)
+        //                                    }
+        //                                    else if (myPurchase.isAcked) {
+        //                                        updatePoints(MyJson.MyJson.encodeToString(listOf(myPurchase.productId))) {
+        //                                            consumePurchases(myPurchase.token)
+        //                                        }
+        //                                    }
                                 }
 
-//                            stateController.showMessage("processing")
+        //                            stateController.showMessage("processing")
                             }
 
                         }) {
@@ -559,27 +556,27 @@ class SettingsStoreActivity : ComponentActivity() {
 
                         Text(
                             "شراء"
-//                            if (myPurchase == null)
-//
-//                            else if (myPurchase.status == PurchaseState.PENDING)
-//                                "بانتظار معالجة الدفع"
-//                            else if (!myPurchase.isAcked)
-//                                "الحصول على النقاط (A)"
-//                            else "الحصول على النقاط (P)"
+        //                            if (myPurchase == null)
+        //
+        //                            else if (myPurchase.status == PurchaseState.PENDING)
+        //                                "بانتظار معالجة الدفع"
+        //                            else if (!myPurchase.isAcked)
+        //                                "الحصول على النقاط (A)"
+        //                            else "الحصول على النقاط (P)"
 
                         )
                     }
                 }
-//                val ma = myBillings.find { it.productId == item.productId }
-//                if (ma != null) {
-//                    ma.purchases.forEach {
-//                        if (it.status == Purchase.PurchaseState.PURCHASED) {
-//                            Button(onClick = {
-//
-//                            }) { Text("") }
-//                        }
-//                    }
-//                }
+        //                val ma = myBillings.find { it.productId == item.productId }
+        //                if (ma != null) {
+        //                    ma.purchases.forEach {
+        //                        if (it.status == Purchase.PurchaseState.PURCHASED) {
+        //                            Button(onClick = {
+        //
+        //                            }) { Text("") }
+        //                        }
+        //                    }
+        //                }
             }
 
         }
@@ -723,7 +720,7 @@ class SettingsStoreActivity : ComponentActivity() {
     fun getInAppProducts() {
         stateController.startAud()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("isSubs",isSubs)
             .build()
 
@@ -755,7 +752,7 @@ class SettingsStoreActivity : ComponentActivity() {
     fun getStoreTime() {
         stateController.startAud()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .build()
 
         requestServer.request2(body, "getStoreTime", { code, fail ->
@@ -768,6 +765,37 @@ class SettingsStoreActivity : ComponentActivity() {
                 )
             storeTime = result
             stateController.successStateAUD()
+        }
+    }
+    fun getStoreCurrencies() {
+        stateController.startAud()
+
+        val body = builderForm3()
+            .build()
+
+        requestServer.request2(body, "getStoreCurrencies", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            storeCurrencies =
+                MyJson.IgnoreUnknownKeys.decodeFromString(
+                    data
+                )
+
+
+            CustomSingleton.selectedStore =  CustomSingleton.selectedStore!!.copy(storeCurrencies = storeCurrencies)
+
+            val updatedStores = CustomSingleton.stores.map {
+                if (it.id ==CustomSingleton.selectedStore!!.id )
+                    CustomSingleton.selectedStore!!
+                else
+                    it
+            }
+            CustomSingleton.stores = updatedStores
+
+            isShowAddCurrency = true
+            stateController.successStateAUD()
+
         }
     }
 
@@ -785,7 +813,7 @@ class SettingsStoreActivity : ComponentActivity() {
 
         stateController.startAud()
 //        val googleBillingStorage = GoogleBillingStorage()
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("productId",productId)
             .addFormDataPart("purchaseToken",purchaseToken)
             .build()
@@ -826,7 +854,7 @@ class SettingsStoreActivity : ComponentActivity() {
     fun updateStoreTime(day: String, storeTimeParameter: StoreTime?) {
         stateController.startAud()
 //        val googleBillingStorage = GoogleBillingStorage()
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("day",day)
             if (storeTimeParameter != null){
                 body.addFormDataPart("openAt", storeTimeParameter.openAt)
@@ -925,7 +953,7 @@ class SettingsStoreActivity : ComponentActivity() {
         if (uri != null){
             uriServiceAccount = uri
 
-            ConfirmDialog(this) {
+            confirmDialog(this) {
 
                 updateServiceAccount(it)
             }
@@ -937,24 +965,77 @@ class SettingsStoreActivity : ComponentActivity() {
 
     private var isShowUpdateDeliveryPrice by mutableStateOf(false)
     private var isShowUpdateStoreTime by mutableStateOf(false)
-    private fun updateDeliveryPrice(price:String,deliveryPriceCurrency:String) {
+    private fun updateDeliveryPrice(deliveryPrice:String,freeDeliveryPrice:String,lessCartPrice:String,) {
         stateController.startAud()
-        val body = builderForm4()
-            .addFormDataPart("price",price)
-            .addFormDataPart("deliveryPriceCurrency",deliveryPriceCurrency)
+        val body = builderForm3()
 
-        requestServer.request2(body.build(), "updateStoreDeliveryPrice", { code, fail ->
+        if (deliveryPrice.isNotEmpty()){
+            body
+                .addFormDataPart("deliveryPrice",deliveryPrice)
+        }
+        if (freeDeliveryPrice.isNotEmpty()){
+            body
+                .addFormDataPart("freeDeliveryPrice",freeDeliveryPrice)
+        }
+        if (lessCartPrice.isNotEmpty()){
+            body
+                .addFormDataPart("lessCartPrice",lessCartPrice)
+        }
+
+
+        requestServer.request2(body.build(), "updateStoreCurrencyPricing", { code, fail ->
             stateController.errorStateAUD(fail)
         }
         ) { data ->
-          CustomSingleton.selectedStore =  CustomSingleton.selectedStore!!.copy(deliveryPrice = price.toDouble(),currencyId = deliveryPriceCurrency.toInt() )
+            val result:StoreCurrency = MyJson.IgnoreUnknownKeys.decodeFromString(data)
+            val updatedStoreCurrencies =  CustomSingleton.selectedStore!!.storeCurrencies.map {
+                if (it.id == result.id)
+                    result
+                else it
+            }
+           CustomSingleton.selectedStore =  CustomSingleton.selectedStore!!.copy(storeCurrencies = updatedStoreCurrencies)
+
+            val updatedStores = CustomSingleton.stores.map {
+                if (it.id ==CustomSingleton.selectedStore!!.id )
+                    CustomSingleton.selectedStore!!
+                else
+                    it
+            }
+            CustomSingleton.stores = updatedStores
             stateController.successStateAUD("تمت   بنجاح")
             isShowUpdateDeliveryPrice = false
         }
     }
+    private fun updateDefaultCurrency(id:String) {
+        stateController.startAud()
+        val body = builderForm3()
+        body
+            .addFormDataPart("storeCurrencyId",id)
+
+
+        requestServer.request2(body.build(), "updateDefaultCurrency", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            val result:List<StoreCurrency> = MyJson.IgnoreUnknownKeys.decodeFromString(data)
+            val updatedStoreCurrencies =  result
+            storeCurrencies = updatedStoreCurrencies
+
+            CustomSingleton.selectedStore =  CustomSingleton.selectedStore!!.copy(storeCurrencies = updatedStoreCurrencies)
+
+            val updatedStores = CustomSingleton.stores.map {
+                if (it.id ==CustomSingleton.selectedStore!!.id )
+                    CustomSingleton.selectedStore!!
+                else
+                    it
+            }
+            CustomSingleton.stores = updatedStores
+            stateController.successStateAUD("تمت   بنجاح")
+        }
+    }
     private fun updateServiceAccount(password:String) {
         stateController.startAud()
-        val body = builderForm4()
+        val body = builderForm3()
         if (uriServiceAccount != null){
             val requestBodyIcon = object : RequestBody() {
                 val mediaType = "json".toMediaTypeOrNull()
@@ -988,7 +1069,7 @@ class SettingsStoreActivity : ComponentActivity() {
     fun readCurrencies() {
         stateController.startAud()
         //
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("d", "e")
             .build()
 
@@ -999,6 +1080,8 @@ class SettingsStoreActivity : ComponentActivity() {
             currencies = MyJson.IgnoreUnknownKeys.decodeFromString(
                 it
             )
+
+
             stateController.successStateAUD()
         }
     }
@@ -1049,8 +1132,55 @@ class SettingsStoreActivity : ComponentActivity() {
     }
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun modalUpdateDeliveryPrice() {
+    private fun modalShowCurrencyOfStore() {
+        ModalBottomSheet(
+            onDismissRequest = { isShowAddCurrency = false }) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 10.dp)
+            ) {
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                 item {
+                     CustomCard2(modifierBox = Modifier) {
+                         Column(Modifier.selectableGroup()) {
+                             Text(" عملات المتجر", modifier = Modifier.padding(14.dp))
+                             storeCurrencies.forEach { text ->
+                                 Row(
+                                     Modifier.fillMaxWidth().height(56.dp)
+                                         .padding(horizontal = 16.dp),
+                                     verticalAlignment = Alignment.CenterVertically,
+                                     horizontalArrangement = Arrangement.SpaceBetween
+                                 )
+                                 {
+                                     val isDefault = text.isSelected == 1
+                                     Text(text = text.currencyName,style = MaterialTheme. typography. bodyLarge,modifier = Modifier. padding(start = 16.dp))
+                                         Button(
+                                             enabled = !isDefault,
+                                             onClick = {
+                                                 confirmDialog(this@SettingsStoreActivity, withTextField = false){
+                                                     updateDefaultCurrency(text.id.toString())
+                                                 }
+                                         }) {
+                                             Text(if (isDefault) "افتراضي" else "تععين ك افتراضي")
+                                         }
 
+                                 }
+                             }
+                         }
+                     }
+                 }
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun modalUpdateDeliveryPrice() {
         ModalBottomSheet(
             onDismissRequest = { isShowUpdateDeliveryPrice = false }) {
             Box(
@@ -1058,80 +1188,142 @@ class SettingsStoreActivity : ComponentActivity() {
                     .fillMaxSize()
                     .padding(bottom = 10.dp)
             ) {
-                var currency by remember { mutableStateOf<Currency?>(null) }
-                var price by remember { mutableStateOf("") }
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Top
                 ) {
                     item {
-                        var price by remember { mutableStateOf("") }
-                        Card(Modifier.padding(8.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
+
+                        val selected  = CustomSingleton.selectedStore!!.storeCurrencies.find { it.isSelected == 1 }
+                        if (selected == null){
+                            Text("قد لايكون هناك عملات او عملات افتراضيه")
+                        }else{
+                            var deliveryPrice by remember { mutableDoubleStateOf(selected.deliveryPrice) }
+                            var freeDeliveryPrice by remember { mutableDoubleStateOf(selected.freeDeliveryPrice)}
+                            var lessCartPrice by remember { mutableDoubleStateOf(selected.lessCartPrice) }
+
+                            CustomCard2(modifierBox = Modifier) {
+                                Column(Modifier.selectableGroup()) {
+                                    Text("سعر التوصيل", modifier = Modifier.padding(14.dp))
+                                    //
+
                                     OutlinedTextField(
                                         modifier = Modifier.padding(8.dp),
-                                        value = price,
+                                        value = selected.deliveryPrice.toString() ,
+                                        enabled = false,
                                         label = {
-                                            Text("السعر")
+                                            Text("السعر الحالي")
                                         },
                                         onValueChange = {
-                                            price = it
                                         }
                                     )
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = deliveryPrice.toString(),
+                                        label = {
+                                            Text("السعر الجديد")
+                                        },
+                                        onValueChange = {
+                                            try {
+                                                deliveryPrice = it.toDouble()
+                                            }catch (e:Exception){
 
-                                    var expanded by remember { mutableStateOf(false) }
-                                    Card(Modifier.padding(8.dp)) {
-                                        Row(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(8.dp)
-                                                .clickable {
-                                                    if (currencies.isEmpty()) {
-                                                        readCurrencies()
-                                                    }
-                                                    expanded = !expanded
-                                                },
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(currency?.name ?: "اختر العملة")
-                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                            }
+                                        },
+                                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr)
+                                    )
+                                }
+                            }
+
+                            CustomCard2(modifierBox = Modifier) {
+                                Column(Modifier.selectableGroup()) {
+                                    Text("اقل مبلغ يمكن طلبه", modifier = Modifier.padding(14.dp))
+                                    //
+
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = selected.lessCartPrice.toString() ,
+                                        enabled = false,
+                                        label = {
+                                            Text("السعر الحالي")
+                                        },
+                                        onValueChange = {
+                                        },
+
+                                    )
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = lessCartPrice.toString(),
+                                        label = {
+                                            Text("السعر الجديد")
+                                        },
+                                        onValueChange = {
+                                            try {
+                                                lessCartPrice = it.toDouble()
+                                            }catch (e:Exception){
+
+                                            }
+                                        },
+                                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr)
+                                    )
+                                }
+                            }
+
+                            CustomCard2(modifierBox = Modifier) {
+                                Column(Modifier.selectableGroup()) {
+                                    Text("توصيل مجاني للطلبات الاكبر من", modifier = Modifier.padding(14.dp))
+                                    //
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = selected.freeDeliveryPrice.toString() ,
+                                        enabled = false,
+                                        label = {
+                                            Text("السعر الحالي")
+                                        },
+                                        onValueChange = {
                                         }
-                                        if (expanded)
-                                            currencies.forEach { item ->
-                                                DropdownMenuItem(onClick = {
-                                                    currency = item
-                                                    expanded = false // Close the dropdown after selection
-                                                }, text = {
-                                                    Text(item.name)
-                                                })
-                                            }
+                                    )
+                                    OutlinedTextField(
+                                        modifier = Modifier.padding(8.dp),
+                                        value = freeDeliveryPrice.toString(),
+                                        label = {
+                                            Text("السعر الجديد")
+                                        },
+                                        onValueChange = {
+                                            try {
+                                                freeDeliveryPrice = it.toDouble()
+                                            }catch (e:Exception){
 
-                                    }
-                                    Button(
-                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                        onClick = {
-                                            if (currency!= null && price.isNotEmpty()){
-                                                ConfirmDialog(this@SettingsStoreActivity){
-                                                    updateDeliveryPrice(price,currency!!.id.toString())
+                                            }
+                                        },
+                                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr)
+                                    )
+                                }
+                            }
+                            Card(Modifier.padding(8.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column {
+                                        val enabled = selected.deliveryPrice != deliveryPrice.toDouble() || selected.freeDeliveryPrice != freeDeliveryPrice.toDouble() || selected.lessCartPrice != lessCartPrice.toDouble();
+                                        Button(
+                                            enabled = enabled,
+                                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                            onClick = {
+                                                if (enabled){
+                                                    confirmDialog(this@SettingsStoreActivity, withTextField = false){
+                                                        updateDeliveryPrice(deliveryPrice.toString(),freeDeliveryPrice.toString(),lessCartPrice.toString())
+                                                    }
                                                 }
-                                            }
-
-                                    }) {
-                                        Text("حفظ")
+                                            }) {
+                                            Text("حفظ")
+                                        }
                                     }
                                 }
-
                             }
                         }
                     }
-
-
-
                 }
             }
         }
@@ -1170,8 +1362,8 @@ class SettingsStoreActivity : ComponentActivity() {
                                             storeTime= storeTime.copy(storeTime = storeTime.storeTime!!.copy(openAt = it)
                                             )
                                         }
-//                            selectedTime = null
-//                            isShowSelectDate = true
+                                //                            selectedTime = null
+                                //                            isShowSelectDate = true
                                     }) {
                                         CustomRow {
                                             Text("يفتح الساعة: " + formatTime(storeTime.storeTime!!.openAt)?.get(0)

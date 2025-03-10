@@ -49,11 +49,9 @@ import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.models.DeliveryMan
-import com.fekraplatform.storemanger.models.Order
 import com.fekraplatform.storemanger.models.OrderComponent
 import com.fekraplatform.storemanger.models.OrderDelivery
 import com.fekraplatform.storemanger.models.OrderProduct
-import com.fekraplatform.storemanger.shared.CustomCard
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomIcon2
@@ -66,8 +64,8 @@ import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.Situations
 import com.fekraplatform.storemanger.shared.StateController
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.shared.builderForm3
-import com.fekraplatform.storemanger.shared.builderForm4
 import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 
@@ -119,7 +117,7 @@ class OrderProductsActivity : ComponentActivity() {
                     ){
                         stickyHeader {
                             if (CustomSingleton2.selectedStoreOrder!!.situationId !in listOf(Situations.CANCELED,Situations.COMPLETED) )
-                            CustomCard2(modifierBox = Modifier.fillMaxWidth().padding(8.dp)) {
+                                CustomCard2(modifierBox = Modifier.fillMaxWidth().padding(8.dp)) {
 
                                     Text( " رقم الطلب: " + CustomSingleton2.selectedStoreOrder!! .id.toString(),Modifier.padding(8.dp))
                                     Text( "الحالة : " + CustomSingleton2.selectedStoreOrder!!.situation.toString(),Modifier.padding(8.dp))
@@ -129,7 +127,7 @@ class OrderProductsActivity : ComponentActivity() {
                                         Modifier
                                             .padding(8.dp)
                                             .clickable {
-//                                                intentFunUrl("tel:${CustomSingleton2.selectedStoreOrder!!.userPhone}")
+                            //                                                intentFunUrl("tel:${CustomSingleton2.selectedStoreOrder!!.userPhone}")
                                             })
                                     Text(
                                         text = CustomSingleton2.selectedStoreOrder!!.amounts.joinToString(
@@ -139,14 +137,14 @@ class OrderProductsActivity : ComponentActivity() {
                                     )
 
 
-                                Button(onClick = {
+                                    Button(onClick = {
 
-                                    cancelOrder()
-                                }) { Text("الغاء الطلب") }
-                            }
+                                        cancelOrder()
+                                    }) { Text("الغاء الطلب") }
+                                }
                         }
                         item {
-                            CustomCard(
+                            CustomCard2(
                                 modifierBox = Modifier
                                     .fillMaxSize()
                                     .clickable {
@@ -202,8 +200,7 @@ class OrderProductsActivity : ComponentActivity() {
                                             Text("تاريخ الدفع: ")
                                             Text(orderComponent!!.orderPayment!!.createdAt)
                                         }
-                                    }
-                                    else{
+                                    } else{
                                         Text(  if (orderComponent!!.orderDetail.paid != 0) "لم يتم ادخال كود الشراء بعد" else "لم يتم الدفع بعد" ,Modifier.padding(8.dp))
                                     }
 
@@ -211,14 +208,11 @@ class OrderProductsActivity : ComponentActivity() {
                                 }
 
 
-
-
-
                             }
                             HorizontalDivider()
                         }
                         item {
-                            CustomCard(
+                            CustomCard2(
                                 modifierBox = Modifier
                                     .fillMaxSize()
                                     .clickable {
@@ -291,9 +285,6 @@ class OrderProductsActivity : ComponentActivity() {
                                 }
 
 
-
-
-
                             }
                             HorizontalDivider()
 
@@ -314,7 +305,7 @@ class OrderProductsActivity : ComponentActivity() {
                         }
                         itemsIndexed(orderComponent!!.orderProducts) { index: Int, orderProduct:OrderProduct ->
 
-                            CustomCard(
+                            CustomCard2(
                                 modifierBox = Modifier
                                     .fillMaxSize()
                                     .clickable {
@@ -325,63 +316,63 @@ class OrderProductsActivity : ComponentActivity() {
 
                                 Column {
 
-//                                    Log.e(
-//                                        "image", SingletonRemoteConfig.remoteConfig.BASE_IMAGE_URL +
-//                                                SingletonRemoteConfig.remoteConfig.SUB_FOLDER_PRODUCT +
-//                                                cartProduct.product.images.first()
-//                                    )
-                                        Row(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(orderProduct.productName)
-                                            Text(orderProduct.optionName)
-                                            CustomIcon(Icons.Outlined.MoreVert,true) {
-                                                orderProductO =orderProduct
-                                                isShowControllProduct = true
+                        //                                    Log.e(
+                        //                                        "image", SingletonRemoteConfig.remoteConfig.BASE_IMAGE_URL +
+                        //                                                SingletonRemoteConfig.remoteConfig.SUB_FOLDER_PRODUCT +
+                        //                                                cartProduct.product.images.first()
+                        //                                    )
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(orderProduct.productName)
+                                        Text(orderProduct.optionName)
+                                        CustomIcon(Icons.Outlined.MoreVert,true) {
+                                            orderProductO =orderProduct
+                                            isShowControllProduct = true
+                                        }
+                                        Checkbox(checked = ids.find { it == orderProduct.id } != null, onCheckedChange = {
+                                            val itemC = ids.find { it == orderProduct.id}
+                                            if (itemC == null) {
+                                                ids = ids + orderProduct.id
+                                            }else{
+                                                ids = ids - orderProduct.id
                                             }
-                                            Checkbox(checked = ids.find { it == orderProduct.id } != null, onCheckedChange = {
-                                                val itemC = ids.find { it == orderProduct.id}
-                                                if (itemC == null) {
-                                                    ids = ids + orderProduct.id
-                                                }else{
-                                                    ids = ids - orderProduct.id
-                                                }
-                                            })
-//                                            Text(
-//                                                modifier = Modifier.padding(8.dp),
-//                                                text = formatPrice(orderProduct.price.toString()) +" "+ orderProduct.currencyName,
-//                                                fontWeight = FontWeight.Bold,
-////                                                color = MaterialTheme.colorScheme.primary
-//                                            )
-//                                            ADControll(
-//                                                orderProduct.product,
-//                                                option.productOption
-//                                            )
-                                        }
-                                        Row(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(formatPrice((orderProduct.price).toString()))
-                                            Text(orderProduct.quantity.toString())
-                                            Text(
-                                                modifier = Modifier.padding(8.dp),
-                                                text = formatPrice((orderProduct.price * orderProduct.quantity).toString()) +" "+ orderProduct.currencyName,
-                                                fontWeight = FontWeight.Bold,
-//                                                color = MaterialTheme.colorScheme.primary
-                                            )
-//                                            ADControll(
-//                                                orderProduct.product,
-//                                                option.productOption
-//                                            )
-                                        }
+                                        })
+                        //                                            Text(
+                        //                                                modifier = Modifier.padding(8.dp),
+                        //                                                text = formatPrice(orderProduct.price.toString()) +" "+ orderProduct.currencyName,
+                        //                                                fontWeight = FontWeight.Bold,
+                        ////                                                color = MaterialTheme.colorScheme.primary
+                        //                                            )
+                        //                                            ADControll(
+                        //                                                orderProduct.product,
+                        //                                                option.productOption
+                        //                                            )
+                                    }
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(formatPrice((orderProduct.price).toString()))
+                                        Text(orderProduct.quantity.toString())
+                                        Text(
+                                            modifier = Modifier.padding(8.dp),
+                                            text = formatPrice((orderProduct.price * orderProduct.quantity).toString()) +" "+ orderProduct.currencyName,
+                                            fontWeight = FontWeight.Bold,
+                        //                                                color = MaterialTheme.colorScheme.primary
+                                        )
+                        //                                            ADControll(
+                        //                                                orderProduct.product,
+                        //                                                option.productOption
+                        //                                            )
+                                    }
 
                                 }
                             }
@@ -398,7 +389,7 @@ class OrderProductsActivity : ComponentActivity() {
     fun read() {
         stateController.startRead()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .build()
 
@@ -422,7 +413,7 @@ class OrderProductsActivity : ComponentActivity() {
     fun changeQuantity(product: OrderProduct) {
         stateController.startAud()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .addFormDataPart("id",product.id.toString())
             .addFormDataPart("qnt",product.quantity.toString())
@@ -483,7 +474,7 @@ class OrderProductsActivity : ComponentActivity() {
     fun cancelOrder() {
         stateController.startAud()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .build()
 
@@ -499,7 +490,7 @@ class OrderProductsActivity : ComponentActivity() {
     fun chooseDeliveryMan(id:String) {
         stateController.startAud()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .addFormDataPart("deliveryManId",id)
             .build()
@@ -531,7 +522,7 @@ class OrderProductsActivity : ComponentActivity() {
     fun deleteOrderProducts(ids:List<Int>,onDone:()->Unit) {
         stateController.startAud()
 
-        val body = builderForm4()
+        val body = builderForm3()
             .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
             .addFormDataPart("ids",ids.toString())
             .build()
@@ -556,7 +547,7 @@ class OrderProductsActivity : ComponentActivity() {
     fun readDeliveryMen() {
         stateController.startAud()
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
 
 // Check if deliveryMan is not null and add the corresponding part to the form data
@@ -657,7 +648,7 @@ class OrderProductsActivity : ComponentActivity() {
                 ) {
 
                     itemsIndexed(deliveryMen){index, item ->
-                        CustomCard( modifierBox = Modifier
+                        CustomCard2( modifierBox = Modifier
                             .fillMaxSize()
                             .clickable {
 
@@ -668,7 +659,7 @@ class OrderProductsActivity : ComponentActivity() {
                                     Button(onClick = {
 
                                         chooseDeliveryMan(item.id.toString())
-//                                        isShowChooseDeliveryMan = true
+                    //                                        isShowChooseDeliveryMan = true
                                     }) {
                                         Text("اختيار")
                                     }

@@ -11,8 +11,8 @@ import androidx.lifecycle.lifecycleScope
 import com.fekraplatform.storemanger.activities.StoresActivity
 import com.fekraplatform.storemanger.activities.LoginActivity
 import com.fekraplatform.storemanger.activities.RemoteConfigModel
-import com.fekraplatform.storemanger.application.MyApplication
 import com.fekraplatform.storemanger.models.ErrorMessage
+import com.google.firebase.remoteconfig.remoteConfigSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,72 +27,37 @@ import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
 class RequestServer(private val activity: ComponentActivity) {
-    val serverConfig = ServerConfig()
-
-    fun request(body: RequestBody, url:String, onFail:(code:Int, fail:String)->Unit, onSuccess:(data:String)->Unit,) {
-        activity.lifecycleScope.launch {
-            withContext(Dispatchers.IO){
-                val okHttpClient = createOkHttpClientWithCustomCert()
-                try {
-                    if (!isInternetAvailable()) {
-                        onFail(0, "لايوجد اتصال بالانترنت")
-                    }
-                    else{
-
-                        val request = Request.Builder()
-                            .url(url)
-                            .post(body)
-                            .build()
-                        val response = okHttpClient.newCall(request).execute()
-                        val data = response.body!!.string()
-                        Log.e("dataaUrl",url)
-                        println(data)
-                        Log.e("dataa",data)
-
-
-                        when(response.code){
-                            200->{
-                                if (MyJson.isJson(data)){
-                                    onSuccess(data)
-                                }
-                                else{
-                                    onFail(response.code,"E 10NJ") //not json
-                                    Log.e("daattt",response.body.toString())
-                                }
-                            }
-//                            400->{
-//
-//                            }
-                            else->{
-                                if (MyJson.isJson(data)){
-                                    val message = MyJson.IgnoreUnknownKeys.decodeFromString<ErrorMessage>(data)
-                                    onFail(response.code,message.message)
-                                }else{
-                                    onFail(response.code,response.code.toString())
-                                }
-
-                            }
-                        }
+    val serverConfig = ServerConfigStorage()
+    fun initVarConfig(onFail:()->Unit, onSuccess: () -> Unit) {
+        val remoteConfig = getRemoteConfig()
+        val configSettings = remoteConfigSettings {
+            minimumFetchIntervalInSeconds = 3600 // 1 hour
+            fetchTimeoutInSeconds = 60 // 60 seconds
+        }
+        remoteConfig.setConfigSettingsAsync(configSettings)
+        remoteConfig.fetchAndActivate()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val allConfigs = remoteConfig.all
+                    // Convert the map to a JSON object
+                    val jsonObject = JSONObject()
+                    for ((key, value) in allConfigs) {
+                        jsonObject.put(key, value.asString())
                     }
 
-
-
-                } catch (e:Exception){
-//                onFail(0,e.message.toString())
-                    val errorMessage = when (e) {
-                        is java.net.SocketTimeoutException -> "Request timed out"
-                        is java.net.UnknownHostException -> "Unable to resolve host"
-                        is java.net.ConnectException -> "Failed to connect to server"
-                        else -> e.message ?: "Unknown error occurred"
-                    }
-                    onFail(0, "Request failed: $errorMessage")
-//                    Log.e("request2", "Exception: ", e)
-                }
-                finally {
-                    okHttpClient.connectionPool.evictAll()
+                    val myRemoteConfig = MyJson.IgnoreUnknownKeys.decodeFromString<RemoteConfigModel>(
+                        jsonObject.toString()
+                    )
+                    serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(myRemoteConfig))
+//                    remoteConfigInRequest = SingletonRemoteConfig.remoteConfig
+                    onSuccess()
+//                stateController.successStateAUD()
+                } else {
+//                stateController.errorStateAUD("frc")
+                    onFail()
+                    Log.e("RemoteConfig", "Failed to fetch remote config", task.exception)
                 }
             }
-        }
     }
     fun request2(body: RequestBody,urlPostfix:String,onFail:(code:Int, fail:String)->Unit, onSuccess:(data:String)->Unit,) {
         if (!isInternetAvailable()) {
@@ -101,7 +66,6 @@ class RequestServer(private val activity: ComponentActivity) {
             mainRequest(urlPostfix, body, onSuccess, onFail)
         }
     }
-
     private fun mainRequest(
         urlPostfix: String,
         body: RequestBody,
@@ -112,9 +76,7 @@ class RequestServer(private val activity: ComponentActivity) {
             withContext(Dispatchers.IO) {
                 val okHttpClient = createOkHttpClientWithCustomCert()
                 try {
-                    val finalUrl =
-                        "${serverConfig.getRemoteConfig().BASE_URL}${serverConfig.getRemoteConfig().VERSION}/${serverConfig.getRemoteConfig().TYPE_STORE_MANAGER}/${urlPostfix}"
-
+                    val finalUrl = "${CustomSingleton.remoteConfig.BASE_URL}${CustomSingleton.remoteConfig.VERSION}/${CustomSingleton.remoteConfig.TYPE_STORE_MANAGER}/${urlPostfix}"
                     val request = Request.Builder()
                         .url(finalUrl)
                         .post(body)
@@ -139,20 +101,26 @@ class RequestServer(private val activity: ComponentActivity) {
                             if (MyJson.isJson(data)) {
                                 val respone =
                                     MyJson.IgnoreUnknownKeys.decodeFromString<ErrorMessage>(data)
+                                if (respone.errors.isNotEmpty())
+                                activity.runOnUiThread {
+                                    Toast.makeText(activity, respone.errors.joinToString(separator = ", "), Toast.LENGTH_SHORT).show()
+                                }
 
+                                when (respone.code) {
+                                    1000 -> {//refresh access token
 
-                                if (respone.code == 1000){//refresh access token
-
-                                    refreshToken{code, fail ->
-                                        onFail(code,fail)
+                                        refreshToken{code, fail ->
+                                            onFail(code,fail)
+                                        }
                                     }
-                                }
-                               else if (respone.code == 2000){//invalid access token
-                                    AToken().setAccessToken("")
-                                    gotoLogin()
-                                }
-                                else{
-                                    onFail(response.code, respone.message)
+                                    2000 -> {//invalid access token
+                                        AToken().setAccessToken("")
+                                        gotoLogin()
+                                    }
+
+                                    else -> {
+                                        onFail(response.code, respone.message)
+                                    }
                                 }
                             } else {
                                 onFail(response.code, "E 10NJ E")
@@ -177,86 +145,12 @@ class RequestServer(private val activity: ComponentActivity) {
             }
         }
     }
-    fun initVarConfig(onFail:()->Unit, onSuccess: () -> Unit) {
-        val remoteConfig = getRemoteConfig()
-        remoteConfig.fetchAndActivate()
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val allConfigs = remoteConfig.all
-                    // Convert the map to a JSON object
-                    val jsonObject = JSONObject()
-                    for ((key, value) in allConfigs) {
-                        jsonObject.put(key, value.asString())
-                    }
 
-                    val myRemoteConfig = MyJson.IgnoreUnknownKeys.decodeFromString<RemoteConfigModel>(
-                        jsonObject.toString()
-                    )
-
-//                    val BASE_URL = remoteConfig.getString("BASE_URL")
-//                    val BASE_IMAGE_URL = remoteConfig.getString("BASE_IMAGE_URL")
-//                    val SUB_FOLDER_PRODUCT = remoteConfig.getString("SUB_FOLDER_PRODUCT")
-//                    val TYPE = "storeManager"
-//                    val SUB_FOLDER_STORE_LOGOS = remoteConfig.getString("SUB_FOLDER_STORE_LOGOS")
-//                    val SUB_FOLDER_STORE_COVERS = remoteConfig.getString("SUB_FOLDER_STORE_COVERS")
-//                    val SUB_FOLDER_USERS_LOGOS = remoteConfig.getString("SUB_FOLDER_USERS_LOGOS")
-//                    val varRemoteConfig = VarRemoteConfig(
-//                        BASE_URL = BASE_URL,
-//                        BASE_IMAGE_URL = BASE_IMAGE_URL,
-//                        SUB_FOLDER_PRODUCT = SUB_FOLDER_PRODUCT,
-//                        TYPE = TYPE,
-//                        SUB_FOLDER_STORE_LOGOS = SUB_FOLDER_STORE_LOGOS,
-//                        SUB_FOLDER_STORE_COVERS = SUB_FOLDER_STORE_COVERS,
-//                    )
-                    serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(myRemoteConfig))
-//                    remoteConfigInRequest = SingletonRemoteConfig.remoteConfig
-                    onSuccess()
-//                stateController.successStateAUD()
-                } else {
-//                stateController.errorStateAUD("frc")
-                    onFail()
-                    Log.e("RemoteConfig", "Failed to fetch remote config", task.exception)
-                }
-            }
-    }
-
-
-    fun createOkHttpClientWithCustomCert(): OkHttpClient {
-//        // Load the certificate from raw resources
-//        val certInputStream: InputStream = activity.resources.openRawResource(R.raw.isrgrootx1)
-//
-//        // Create a CertificateFactory
-//        val certificateFactory = CertificateFactory.getInstance("X.509")
-//
-//        // Generate the certificate
-//        val certificate = certificateFactory.generateCertificate(certInputStream) as X509Certificate
-//
-//        // Create a KeyStore and add the certificate
-//        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
-//            load(null, null)
-//            setCertificateEntry("ca", certificate)
-//        }
-//
-//        // Initialize TrustManagerFactory with the KeyStore
-//        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-//        trustManagerFactory.init(keyStore)
-//
-//        // Create SSLContext with the custom TrustManager
-//        val sslContext = SSLContext.getInstance("TLS")
-//        sslContext.init(null, trustManagerFactory.trustManagers, null)
-
-        // Build OkHttpClient with the custom SSLContext
-
-
-
-
+    private fun createOkHttpClientWithCustomCert(): OkHttpClient {
         return OkHttpClient.Builder().connectTimeout(2,TimeUnit.MINUTES).readTimeout(2,TimeUnit.MINUTES).writeTimeout(2,TimeUnit.MINUTES)
-//            .sslSocketFactory(sslContext.socketFactory, trustAllCertificates)
-//            .sslSocketFactory(sslContext.socketFactory, trustManagerFactory.trustManagers.first() as X509TrustManager)
             .build()
     }
-
-    fun isInternetAvailable(): Boolean {
+    private fun isInternetAvailable(): Boolean {
         val connectivityManager = activity.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
@@ -274,11 +168,9 @@ class RequestServer(private val activity: ComponentActivity) {
        activity.startActivity(intent)
         activity.finish()
     }
-    private fun refreshToken( onFail: (code: Int, fail: String) -> Unit) {
-//        Toast.makeText(MyApplication.AppContext,"تحديث الجلسة",Toast.LENGTH_SHORT).show()
+    private fun refreshToken(onFail: (code: Int, fail: String) -> Unit) {
         val aToken = AToken()
         val body = builderForm2()
-            .addFormDataPart("accessToken",aToken.getAccessToken().token)
             .build()
         request2(body,"refreshToken",{code, fail ->
             Log.e("frf","454")
@@ -292,5 +184,4 @@ class RequestServer(private val activity: ComponentActivity) {
         }
 
     }
-
 }

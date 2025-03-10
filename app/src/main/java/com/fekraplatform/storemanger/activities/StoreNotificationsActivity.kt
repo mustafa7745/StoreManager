@@ -6,11 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -40,11 +37,9 @@ import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.models.CustomOption
 import com.fekraplatform.storemanger.models.PageModel
 import com.fekraplatform.storemanger.models.UserInfo
-import com.fekraplatform.storemanger.shared.AToken
-import com.fekraplatform.storemanger.shared.ConfirmDialog
-import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.shared.confirmDialog
+import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
-import com.fekraplatform.storemanger.shared.CustomImageView1
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.CustomRow2
@@ -53,7 +48,7 @@ import com.fekraplatform.storemanger.shared.MainCompose2
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 
 class StoreNotificationsActivity : ComponentActivity() {
@@ -80,7 +75,7 @@ class StoreNotificationsActivity : ComponentActivity() {
             StoreMangerTheme  {
                 BackHand()
                 Column(Modifier.safeDrawingPadding()) {
-                    CustomCard(modifierBox = Modifier) {
+                    CustomCard2(modifierBox = Modifier) {
                         CustomRow2 {
                             CustomIcon(Icons.AutoMirrored.Default.ArrowBack, border = true) {
                                 backHandler()
@@ -127,7 +122,7 @@ class StoreNotificationsActivity : ComponentActivity() {
         var selectedOption by remember { mutableStateOf(radioOptions.first()) }
         LazyColumn {
             item {
-                CustomCard(modifierBox = Modifier) {
+                CustomCard2(modifierBox = Modifier) {
                     Column(Modifier.selectableGroup()) {
                         Text("نوع الاشعار", modifier = Modifier.padding(14.dp))
                         radioOptions.forEach { text ->
@@ -160,7 +155,7 @@ class StoreNotificationsActivity : ComponentActivity() {
                         Button(
                             modifier = Modifier.fillMaxWidth().padding(8.dp),
                             onClick = {
-                                ConfirmDialog(this@StoreNotificationsActivity) {
+                                confirmDialog(this@StoreNotificationsActivity) {
                                     addNotification(it,title,description)
                                 }
 
@@ -178,7 +173,7 @@ class StoreNotificationsActivity : ComponentActivity() {
 
     @Composable
     private fun SettingsList() {
-        CustomCard(modifierBox = Modifier.clickable { page = pages[1]}) {
+        CustomCard2(modifierBox = Modifier.clickable { page = pages[1]}) {
             CustomRow {
                 Text("ارسال اشعار")
                 CustomImageViewUri(modifier = Modifier.size(30.dp), imageUrl = R.drawable.uinfo)
@@ -187,7 +182,7 @@ class StoreNotificationsActivity : ComponentActivity() {
         }
 
 
-        CustomCard(modifierBox = Modifier.clickable { page = pages[2]}) {
+        CustomCard2(modifierBox = Modifier.clickable { page = pages[2]}) {
             CustomRow {
                 Text("عرض")
                 CustomImageViewUri(
@@ -213,7 +208,7 @@ class StoreNotificationsActivity : ComponentActivity() {
     ///
     private fun readUserProfile() {
         stateController.startAud()
-        val body = builderForm3().build()
+        val body = builderForm2().build()
 
         requestServer.request2(body, "getUserProfile", { code, fail ->
             stateController.errorStateAUD(fail)
@@ -229,7 +224,7 @@ class StoreNotificationsActivity : ComponentActivity() {
     }
     private fun addNotification(password:String,title:String,description:String) {
         stateController.startAud()
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("appId",CustomSingleton.selectedStore!!.app!!.id.toString())
             .addFormDataPart("title",title)
             .addFormDataPart("description",description)

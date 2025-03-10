@@ -42,8 +42,8 @@ import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomIcon2
 import com.fekraplatform.storemanger.shared.CustomSingleton
+import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MainCompose2
-import com.fekraplatform.storemanger.shared.MyToast
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.convertStringToLatLng
@@ -76,11 +76,11 @@ class LocationStoreActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
 //    lateinit var la: Store
 //    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    lateinit var locationRequest: LocationRequest
-    private lateinit var settingsClient: SettingsClient
-    var isGpsEnabled by mutableStateOf(false)
-    var location by mutableStateOf<LatLng?>(null)
+//    private lateinit var fusedLocationClient: FusedLocationProviderClient
+//    lateinit var locationRequest: LocationRequest
+//    private lateinit var settingsClient: SettingsClient
+//    var isGpsEnabled by mutableStateOf(false)
+//    var location by mutableStateOf<LatLng?>(null)
     var editMode by mutableStateOf(false)
 
 
@@ -88,25 +88,39 @@ class LocationStoreActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         stateController.startRead()
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        settingsClient = LocationServices.getSettingsClient(this)
-        locationRequest = LocationRequest.Builder(10000).setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
+//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+//        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+//        isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+//        settingsClient = LocationServices.getSettingsClient(this)
+//        locationRequest = LocationRequest.Builder(10000).setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
         ///
+        initLocation()
         getCurrentLocation{
             Log.e("ffffff",location.toString(),)
             Log.e("selected",CustomSingleton.selectedStore.toString(),)
-            location = convertStringToLatLng( if (CustomSingleton.selectedStore!!.latLng != null)  CustomSingleton.selectedStore!!.latLng!! else "0.0,0.0" )
+            if (CustomSingleton.selectedStore!!.latLng != null){
+                location = convertStringToLatLng(CustomSingleton.selectedStore!!.latLng!!)
+            }
+
 //            location = latLng
             Log.e("llllll",location.toString(),)
+            stateController.successState()
         }
 
         setContent {
             StoreMangerTheme {
-                MainCompose2(
-                    0.dp, stateController, this,
-
+                MainCompose1 (
+                    0.dp, stateController, this,{
+                        getCurrentLocation{
+                            Log.e("ffffff",location.toString(),)
+                            Log.e("selected",CustomSingleton.selectedStore.toString(),)
+                            if (CustomSingleton.selectedStore!!.latLng != null){
+                                location = convertStringToLatLng(CustomSingleton.selectedStore!!.latLng!!)
+                            }//            location = latLng
+                            Log.e("llllll",location.toString(),)
+                            stateController.successState()
+                        }
+                    }
                 ) {
                     Column (
                         modifier = Modifier
@@ -278,24 +292,21 @@ class LocationStoreActivity : ComponentActivity() {
 //            }
 //        }
 //    }
+
+    /// GPS FUNCTIONS AND CALLBACKES AND VARS
+    // 1) VARS
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private lateinit var settingsClient: SettingsClient
+    private var isGpsEnabled by mutableStateOf(false)
+    private var isLoadingStateLocation by mutableStateOf<Boolean>(false)
+    private var isSuccessStateLocation by mutableStateOf<Boolean?>(null)
+    private var messageLocation by mutableStateOf("للحصول على تجربة مميزة فعل الموقع")
+    var location by mutableStateOf<LatLng?>(null)
+    // 2) Functions
     private fun requestPermissions() {
-    // Launch the request permission dialog
         requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
-
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                // Permission granted, now we can get the location
-                getCurrentLocation()
-            } else {
-                // Permission denied, show a message to the user
-                Toast.makeText(
-                    this,
-                    "Location permission is required to fetch country name",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
     private fun getCurrentLocation(onSuccess:(LatLng)->Unit = {}) {
         if (!isGpsEnabled){
             Log.e("f2",isGpsEnabled.toString())
@@ -314,73 +325,44 @@ class LocationStoreActivity : ComponentActivity() {
         }
         Log.e("sddd3", "11")
 
-//        fusedLocationClient. requestLocationUpdates(locationRequest,locationCallback{
-//            stateController.successState()
-//            onSuccess(it)
-//        }, null)
+        fusedLocationClient. requestLocationUpdates(locationRequest,locationCallback{
+            isSuccessStateLocation = true
+            Log.e("ffffdf2",location.toString())
+            onSuccess(it)
+        }, null)
+//        GlobalScope.launch {
+//            fusedLocationClient.lastLocation
+//                .addOnSuccessListener { l ->
+//                    Log.e("sddd3", "55")
+//                    if (l != null) {
+//                        Log.e("sddd3", "669")
+//                        Log.e("loc", location.toString())
+//                        Log.e("sddd3", "669")
+//                        location = LatLng(l.latitude, l.longitude)
+//                        onSuccess(location!!)
+//                        isSuccessStateLocation = true
+//                    } else {
+//                        messageLocation = "Unable to get location Try Again"
+//                        // Handle the case where the location is not available
+////                    Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//                .addOnFailureListener {
+//                    // Handle failure in location retrieval
+////                MyToast(this,"Failed to get location")
+//                }
+//        }
 
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { l ->
-                if (l != null) {
-                    location = LatLng(l.latitude, l.longitude)
-                    stateController.successState()
-                    onSuccess(location!!)
-                } else {
-                    stateController.errorStateRead("Unable to get location Try Again")
-                    // Handle the case where the location is not available
-//                    Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .addOnFailureListener {
-                // Handle failure in location retrieval
-//                MyToast(this,"Failed to get location")
-            }
 
-    }
 
-    fun updateLocation() {
-        val latiLng = location!!.latitude.toString() + "," + location!!.longitude.toString()
-        stateController.startAud()
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("latLng",latiLng)
-            .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
-            .build()
-
-        requestServer.request2(body, "updateStoreLocation", { code, fail ->
-            stateController.errorStateAUD(fail)
-        }
-        ) { data ->
-//            val result: Store =
-//                MyJson.IgnoreUnknownKeys.decodeFromString(
-//                    data
-//                )
-            SelectedStore.store.value!! .latLng = latiLng
-            MyToast(this,"تم بنجاح")
-            stateController.successStateAUD()
-            finish()
-        }
     }
     private fun requestEnableGPS() {
-//        // Create a LocationRequest for high accuracy
-//        val locationRequest: LocationRequest = LocationRequest.Builder(10000)
-////            .setIntervalMillis(10000)  // Set interval to 10 seconds
-////                .setFastestIntervalMillis(5000)  // Set fastest interval to 5 seconds
-//            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)  // High accuracy for GPS
-//            .build()
-//            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-//            interval = 10000  // Update location every 10 seconds
-//        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-//        gpsActivityResultLauncher.launch(intent)
-        //
         // Create a LocationSettingsRequest to check GPS and other location settings
         val locationSettingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(locationRequest)
             .build()
-
         // Check the settings
         val task: Task<LocationSettingsResponse> = settingsClient.checkLocationSettings(locationSettingsRequest)
-
         task.addOnSuccessListener(this, OnSuccessListener<LocationSettingsResponse> {
             // If GPS is enabled, proceed to get the current location
             Log.d("GPS", "GPS is enabled.")
@@ -402,8 +384,25 @@ class LocationStoreActivity : ComponentActivity() {
                 }
             }
         }
-    }
 
+
+    }
+    private fun initLocation() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        settingsClient = LocationServices.getSettingsClient(this)
+        locationRequest =
+            LocationRequest.Builder(10000).setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
+    }
+    // 3)Callbacks
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        if (isGranted) {
+            getCurrentLocation()
+        } else {
+            stateController.errorStateRead( "Permission GPS denied")
+        }
+    }
     private val gpsActivityResultLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             Log.e("result ", result.toString())
@@ -418,12 +417,42 @@ class LocationStoreActivity : ComponentActivity() {
             override fun onLocationResult(locationResult: LocationResult) {
                 val locations = locationResult.locations
                 for (l in locations) {
+
                     // Pass each location to the provided callback
 
                     location = LatLng(l.latitude, l.longitude)
                     onSuccess(location!!)
+                    Log.e("ffffdf",location.toString())
+                    fusedLocationClient.removeLocationUpdates(this)
                 }
             }
+        }
+    }
+
+
+    fun updateLocation() {
+        val latiLng = location!!.latitude.toString() + "," + location!!.longitude.toString()
+        stateController.startAud()
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("latLng",latiLng)
+            .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
+            .addFormDataPart("latitude", location!!.latitude.toString())
+            .addFormDataPart("longitude", location!!.longitude.toString())
+            .build()
+
+        requestServer.request2(body, "updateStoreLocation", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+//            val result: Store =
+//                MyJson.IgnoreUnknownKeys.decodeFromString(
+//                    data
+//                )
+            SelectedStore.store.value!! .latLng = latiLng
+
+            stateController.successStateAUD("تم بنجاح")
+            finish()
         }
     }
 }

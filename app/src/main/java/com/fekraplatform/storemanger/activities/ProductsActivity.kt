@@ -1,6 +1,5 @@
 package com.fekraplatform.storemanger.activities
 
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -71,7 +70,7 @@ import com.fekraplatform.storemanger.models.Product
 import com.fekraplatform.storemanger.models.ProductView
 import com.fekraplatform.storemanger.models.StoreNestedSection
 import com.fekraplatform.storemanger.shared.CustomIcon
-import com.fekraplatform.storemanger.shared.CustomImageView
+import com.fekraplatform.storemanger.shared.CustomImageView1
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.IconDelete
@@ -83,6 +82,7 @@ import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.StoredCustomPrice
 import com.fekraplatform.storemanger.shared.StoredProducts
 import com.fekraplatform.storemanger.shared.U1R
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.shared.builderForm3
 import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.storage.AppDatabase
@@ -101,7 +101,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okio.BufferedSink
-import java.io.File
 import java.io.InputStream
 import java.time.Duration
 import java.time.LocalDateTime
@@ -569,7 +568,7 @@ class ProductsActivity : ComponentActivity() {
                                                         requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL + requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_PRODUCT + item.image
                                                     )
                                                     Box(Modifier.size(100.dp)) {
-                                                        CustomImageView(
+                                                        CustomImageView1(
                                                             modifier = Modifier
                                                                 .size(100.dp)
                                                                 .padding(8.dp)
@@ -580,9 +579,7 @@ class ProductsActivity : ComponentActivity() {
                                                                             true
                                                                     }
                                                                 },
-                                                            context = this@ProductsActivity,
                                                             imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL + requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_PRODUCT + item.image,
-                                                            okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                                                         )
 
                                                         if (!CustomSingleton.isSharedStore())
@@ -890,7 +887,7 @@ class ProductsActivity : ComponentActivity() {
         stateController.startRead()
 
         Log.e("sec", storeNestedSection.toString())
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeNestedSectionId", storeNestedSection.id.toString())
             .addFormDataPart("storeId", CustomSingleton.getCustomStoreId().toString())
             .build()
@@ -1389,7 +1386,7 @@ class ProductsActivity : ComponentActivity() {
                                     .padding(8.dp)
                                     .clickable {
                                         if (currencies.value.isEmpty()) {
-                                            readCurrencies()
+                                            readCurrencies(false)
                                         }
                                         expanded = !expanded
                                     },
@@ -1727,11 +1724,9 @@ class ProductsActivity : ComponentActivity() {
                                 Text("تأكيد تعديل الصورة",)
                             }
                         } else {
-                            CustomImageView(
+                            CustomImageView1(
                                 modifier = Modifier.fillMaxWidth(),
-                                context = this@ProductsActivity,
                                 imageUrl = U1R.BASE_IMAGE_URL + U1R.SUB_FOLDER_PRODUCT + selectedImage.image,
-                                okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                             )
                             Button(
                                 onClick = {
@@ -1830,11 +1825,9 @@ class ProductsActivity : ComponentActivity() {
                 LazyColumn {
                     item {
 
-                        CustomImageView(
+                        CustomImageView1(
                             modifier = Modifier.fillMaxWidth(),
-                            context = this@ProductsActivity,
                             imageUrl = U1R.BASE_IMAGE_URL + U1R.SUB_FOLDER_PRODUCT + selectedImage.image,
-                            okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                         )
                         Button(
                             onClick = {
@@ -1888,7 +1881,7 @@ class ProductsActivity : ComponentActivity() {
             .addFormDataPart("id",id.toString())
             .addFormDataPart("image", "file.jpg", requestBody)
             .build()
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/updateProductImage",{code,fail->
+        requestServer.request2(body,"updateProductImage",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
@@ -1970,7 +1963,7 @@ class ProductsActivity : ComponentActivity() {
 //        val urli = "https://user2121.greenland-rest.com/public/api/v1/upload-image"
 
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/deleteProductImage",{code,fail->
+        requestServer.request2(body,"deleteProductImage",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){
@@ -2069,7 +2062,7 @@ class ProductsActivity : ComponentActivity() {
     fun readProductViews() {
         stateController.startAud()
 //
-        val body = builderForm3().build()
+        val body = builderForm2().build()
         requestServer.request2(body, "getProductViews", { code, fail ->
             stateController.errorStateAUD(fail)
         }
@@ -2093,13 +2086,12 @@ class ProductsActivity : ComponentActivity() {
 
         stateController.startAud()
 
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
+        val body = builderForm3()
             .addFormDataPart("productId", if (getWithProduct) selectedProduct.id.toString() else selectedStoreProduct.product.productId.toString())
             .addFormDataPart("optionId", optionId.toString())
             .addFormDataPart("storeNestedSectionId", storeNestedSection.id.toString())
             .addFormDataPart("price", price.toString())
-            .addFormDataPart("storeId", storeId)
+//            .addFormDataPart("storeId", storeId)
             .addFormDataPart("currencyId", currencyId.toString())
             .addFormDataPart("getWithProduct", if (getWithProduct) "1" else "0")
             .build()
@@ -2175,7 +2167,7 @@ class ProductsActivity : ComponentActivity() {
     fun updateProductName(value: String) {
         stateController.startAud()
         //
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId",CustomSingleton.selectedStore!!.id.toString())
             .addFormDataPart("productId",selectedStoreProduct.product.productId.toString())
             .addFormDataPart("productName", value)
@@ -2244,7 +2236,7 @@ class ProductsActivity : ComponentActivity() {
     fun updateProductView(value: NativeProductView) {
         stateController.startAud()
         //
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("productId", selectedStoreProduct.product.productId.toString())
             .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
             .addFormDataPart("productViewId", value.id.toString())
@@ -2556,7 +2548,7 @@ class ProductsActivity : ComponentActivity() {
                 stateController.successStateAUD()
             }
         }
-    fun readCurrencies() {
+    fun readCurrencies(openChoose:Boolean = true) {
         stateController.startAud()
         //
         val body = MultipartBody.Builder()
@@ -2572,6 +2564,7 @@ class ProductsActivity : ComponentActivity() {
                 it
             )
             stateController.successStateAUD()
+            if (openChoose)
             isShowChooseCurrencies = true
         }
     }
@@ -2584,7 +2577,7 @@ class ProductsActivity : ComponentActivity() {
             .addFormDataPart("ids",ids.toString())
             .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/deleteProductOptions",{code,fail->
+        requestServer.request2(body,"deleteProductOptions",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->
@@ -2951,6 +2944,7 @@ class ProductsActivity : ComponentActivity() {
                                 Text(ops.name)
                                 Button(
                                     onClick = {
+
                                         updateCurrency(ops.id.toString())
 //                                        addProduct(product.id.toString())
                                     }) { Text("اختيار") }
@@ -2963,6 +2957,7 @@ class ProductsActivity : ComponentActivity() {
             }
         }
     }
+
     fun addProduct(name: String, description: String, onSuccess: (data: Product2) -> Unit) {
         stateController.startAud()
         val body = MultipartBody.Builder()

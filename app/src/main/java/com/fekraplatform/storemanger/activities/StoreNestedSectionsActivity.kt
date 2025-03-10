@@ -322,7 +322,7 @@ private fun add(nestedSectionId: String) {
 
 
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addStoreNestedSection",{code,fail->
+        requestServer.request2(body,"addStoreNestedSection",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->

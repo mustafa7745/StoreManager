@@ -3,33 +3,22 @@ package com.fekraplatform.storemanger.activities
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -38,7 +27,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -49,47 +37,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
-import coil.compose.rememberImagePainter
-import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.models.CustomOption
 import com.fekraplatform.storemanger.models.Order
-import com.fekraplatform.storemanger.models.Store
-import com.fekraplatform.storemanger.models.StoreOrders
-import com.fekraplatform.storemanger.shared.AToken
-import com.fekraplatform.storemanger.shared.AppInfoMethod
-import com.fekraplatform.storemanger.shared.CustomCard
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
-import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.CustomSingleton2
-import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
-import com.fekraplatform.storemanger.shared.MainCompose2
 import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.VarRemoteConfig
-import com.fekraplatform.storemanger.shared.builderForm
-import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.ktx.messaging
-import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -176,7 +140,7 @@ class StoreOrdersActivity : ComponentActivity() {
 
 
                         itemsIndexed(CustomSingleton2.storeOrders!!.orders){index, order ->
-                            CustomCard( modifierBox = Modifier
+                            CustomCard2( modifierBox = Modifier
                                 .fillMaxSize()
                                 .clickable {
 
@@ -353,7 +317,7 @@ class StoreOrdersActivity : ComponentActivity() {
 //        if (!isLoadingMore)
         stateController.startAud()
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId",SelectedStore.store.value!!.id.toString())
             .addFormDataPart("situationId",situationId)
             .addFormDataPart("fromDate",fromDate)
@@ -392,7 +356,7 @@ class StoreOrdersActivity : ComponentActivity() {
     fun readSituations() {
         stateController.startRead()
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId",SelectedStore.store.value!!.id.toString())
             .addFormDataPart("fromDate",fromDate)
             .addFormDataPart("toDate",toDate)

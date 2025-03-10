@@ -9,6 +9,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,8 +22,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -41,25 +49,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.Singlton.SelectedStore
+import com.fekraplatform.storemanger.models.Currency
 import com.fekraplatform.storemanger.models.CustomOption
 import com.fekraplatform.storemanger.models.Store
 import com.fekraplatform.storemanger.shared.AToken
-import com.fekraplatform.storemanger.shared.CustomCard
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
-import com.fekraplatform.storemanger.shared.CustomImageView
+import com.fekraplatform.storemanger.shared.CustomImageView1
 import com.fekraplatform.storemanger.shared.CustomImageViewUri
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.storage.MyAppStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import com.google.firebase.ktx.Firebase
@@ -82,6 +95,7 @@ class StoresActivity : ComponentActivity() {
     var uriLogo=mutableStateOf<Uri?>(null)
     var uriCover =mutableStateOf<Uri?>(null)
     var isHaveMore by mutableStateOf(false)
+    var mainCategories by mutableStateOf<List<MainCategory>>(emptyList())
 
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,7 +112,7 @@ class StoresActivity : ComponentActivity() {
                     ) {
                         LazyColumn(Modifier.safeDrawingPadding()) {
                             stickyHeader {
-                                CustomCard(modifierBox = Modifier){
+                                CustomCard2(modifierBox = Modifier){
                                     Column {
                                         DropDownDemo()
                                     }
@@ -108,7 +122,7 @@ class StoresActivity : ComponentActivity() {
 
                                 item {
                                     CustomCard2(modifierBox = Modifier) {
-                                        CustomImageView(
+                                        CustomImageView1(
                                             modifier = Modifier
                                                 .size(100.dp)
                                                 .padding(8.dp)
@@ -117,11 +131,9 @@ class StoresActivity : ComponentActivity() {
                                                     storeToUpdate = CustomSingleton.selectedStore!!
                                                     isShowUpdateStore.value = true
                                                 },
-                                            context = this@StoresActivity,
                                             imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_LOGOS+CustomSingleton.selectedStore!!.logo,
-                                            okHttpClient = requestServer.createOkHttpClientWithCustomCert()
                                         )
-                                }
+                                    }
 
                                 }
 
@@ -203,6 +215,7 @@ class StoresActivity : ComponentActivity() {
     @Composable
     private fun modalAddMyCategory() {
 
+        if (mainCategories.isEmpty())readMainCategories()
 
         ModalBottomSheet(
             onDismissRequest = { isShowAddCatgory.value = false }) {
@@ -218,111 +231,141 @@ class StoresActivity : ComponentActivity() {
                 ) {
 
                     item {
-                    CustomCard2(modifierBox =  Modifier) {
-                        OutlinedTextField(
-                            modifier = Modifier.padding(8.dp),
-                            value = storeName,
-                            onValueChange = {
-                                storeName = it
-                            },
-                            label = {
-                                Text("اسم المتجر")
-                            }
-                        )
-                        Text("شعار المتجر", modifier = Modifier.padding(12.dp) )
-                        Card(
+                        CustomCard2(modifierBox =  Modifier) {
+                            OutlinedTextField(
+                                modifier = Modifier.padding(8.dp),
+                                value = storeName,
+                                onValueChange = {
+                                    storeName = it
+                                },
+                                label = {
+                                    Text("اسم المتجر")
+                                }
+                            )
+                            Text("شعار المتجر", modifier = Modifier.padding(12.dp) )
+                            Card(
                                 Modifier
                                     .size(100.dp)
                                     .padding(8.dp)
                                     .clickable {
                                         getContentlogo.launch("image/*")
                                     }) {
-//                            if (){
-                            if (uriLogo.value != null)
-                            CustomImageViewUri(
-                                modifier =  Modifier.fillParentMaxSize(),
-                                imageUrl =  uriLogo.value!!,
-                                contentScale = ContentScale.Inside
-                            )else{
-                                CustomImageViewUri(
-                                    imageUrl =  R.drawable.baseline_add_card_24,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-//                            }
-                        }
-
-                        Text("صورة غلاف المتجر", modifier = Modifier.padding(12.dp) )
-                        Card(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(8.dp)
-                                .clickable {
-                                    getContentCover.launch("image/*")
-                                }) {
-
-                            if (uriCover.value != null){
-                                CustomImageViewUri(
-                                    modifier =  Modifier.fillParentMaxSize(),
-                                    imageUrl =  uriCover.value!! ,
-                                contentScale = ContentScale.Inside
-                                )
-                            }else{
-                                CustomImageViewUri(
-                                    imageUrl =  R.drawable.baseline_add_card_24,
-                                contentScale = ContentScale.Crop
-                                )
+                    //                            if (){
+                                if (uriLogo.value != null)
+                                    CustomImageViewUri(
+                                        modifier =  Modifier.fillParentMaxSize(),
+                                        imageUrl =  uriLogo.value!!,
+                                        contentScale = ContentScale.Inside
+                                    )else{
+                                    CustomImageViewUri(
+                                        imageUrl =  R.drawable.baseline_add_card_24,
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                    //                            }
                             }
 
-//
-                        }
+                            Text("صورة غلاف المتجر", modifier = Modifier.padding(12.dp) )
+                            Card(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .padding(8.dp)
+                                    .clickable {
+                                        getContentCover.launch("image/*")
+                                    }) {
 
-                        val radioOptions = listOf(
-                            CustomOption(1,"متجر مشترك"),
-                            CustomOption(2,"متجر مخصص"),
-                        )
-                        var selectedOption by remember { mutableStateOf<CustomOption?>(null) }
+                                if (uriCover.value != null){
+                                    CustomImageViewUri(
+                                        modifier =  Modifier.fillParentMaxSize(),
+                                        imageUrl =  uriCover.value!! ,
+                                        contentScale = ContentScale.Inside
+                                    )
+                                }else{
+                                    CustomImageViewUri(
+                                        imageUrl =  R.drawable.baseline_add_card_24,
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
 
-                        Text("نوع المتجر", modifier = Modifier.padding(14.dp))
-                        radioOptions.forEach { text ->
-                            Row(
-                                Modifier.fillMaxWidth().height(56.dp)
-                                    .selectable(
-                                        selected = (text == selectedOption),
-                                        onClick = {
-                                            selectedOption = text
-//                                    if (selectedOption.id == 2 ){
-////                                        selectedLocation = null
-//                                    }
-//
-//                                    onOptionSelected(text)
+                    //
+                            }
 
-                                        },
-                                        role = Role.RadioButton
-                                    ).padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            val radioOptions = listOf(
+                                CustomOption(1,"متجر مشترك"),
+                                CustomOption(2,"متجر مخصص"),
                             )
-                            {
-                                RadioButton(selected = (text == selectedOption), onClick = null)
-                                Text(text = text.name,style = MaterialTheme. typography. bodyLarge,modifier = Modifier. padding(start = 16.dp))
+                            var selectedOption by remember { mutableStateOf<CustomOption?>(null) }
+
+                            Text("نوع المتجر", modifier = Modifier.padding(14.dp))
+                            radioOptions.forEach { text ->
+                                Row(
+                                    Modifier.fillMaxWidth().height(56.dp)
+                                        .selectable(
+                                            selected = (text == selectedOption),
+                                            onClick = {
+                                                selectedOption = text
+                    //                                    if (selectedOption.id == 2 ){
+                    ////                                        selectedLocation = null
+                    //                                    }
+                    //
+                    //                                    onOptionSelected(text)
+
+                                            },
+                                            role = Role.RadioButton
+                                        ).padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                )
+                                {
+                                    RadioButton(selected = (text == selectedOption), onClick = null)
+                                    Text(text = text.name,style = MaterialTheme. typography. bodyLarge,modifier = Modifier. padding(start = 16.dp))
+                                }
                             }
+                            Text("اختر الفئة الملائمة لمتجرك ")
+                            var selectedCategory by remember { mutableStateOf<MainCategory?>(null) }
+                            LazyHorizontalGrid (
+                                rows = GridCells.Fixed(2),
+                                modifier = Modifier
+                                    .height(220.dp)
+                                    .padding(8.dp)
+                                    .background(Color.White)
+                            ) {
+
+                                itemsIndexed(mainCategories){index: Int, item: MainCategory ->
+                                    Column (horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
+                                        .padding(2.dp)
+                                        .width(100.dp)
+                                        .background(if (selectedCategory == item) Color.Gray else Color.Transparent)
+                                        .clickable { selectedCategory = item }){
+                                        CustomImageView1(
+                                            modifier = Modifier
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.primary, CircleShape
+                                                )
+                                                .clip(CircleShape)
+                                                .size(50.dp)
+                                            ,
+                                            imageUrl = item.image,
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Text(item.name, textAlign = TextAlign.Center, fontSize = 12.sp , overflow = TextOverflow.Ellipsis, softWrap = true, modifier = Modifier.height(50.dp))
+
+                                    }
+                                }
+                            }
+
+                            Button(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                enabled = storeName.length > 5 && uriLogo.value != null && uriCover.value != null && selectedOption != null && selectedCategory != null ,
+                                onClick = {
+                                    addStore(storeName,selectedOption!!.id.toString(),selectedCategory!!.id.toString())
+                                }) {
+                                Text("اضافة")
+                            }
+
                         }
-
-                        Button(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            enabled = storeName.length > 5 && uriLogo.value != null && uriCover.value != null && selectedOption != null ,
-                            onClick = {
-                                addStore(storeName,selectedOption!!.id.toString())
-                            }) {
-                            Text("اضافة")
-                        }
-
                     }
-                    }
-
-
-
                 }
             }
         }
@@ -480,7 +523,8 @@ class StoresActivity : ComponentActivity() {
                     },
                         onClick = {
                             isDropDownExpanded.value = false
-                            isShowAddCatgory.value = true
+                            gotoAddStore()
+//                            isShowAddCatgory.value = true
                         })
                 }
             }
@@ -492,7 +536,7 @@ class StoresActivity : ComponentActivity() {
     private fun read() {
         stateController.startRead()
 
-        val body = builderForm3()
+        val body = builderForm2()
             .build()
 
         requestServer.request2(body, "getStores", { code, fail ->
@@ -510,7 +554,65 @@ class StoresActivity : ComponentActivity() {
             stateController.successState()
         }
     }
-    private fun addStore(name: String,storeTypeId:String) {
+    private fun readMainCategories() {
+        stateController.startAud()
+
+//        val requestBodyIcon = object : RequestBody() {
+//            val mediaType = "image/jpeg".toMediaTypeOrNull()
+//            override fun contentType(): MediaType? {
+//                return mediaType
+//            }
+//
+//            override fun writeTo(sink: BufferedSink) {
+//                contentResolver.openInputStream(uriLogo.value!!)?.use { input ->
+//                    val buffer = ByteArray(4096)
+//                    var bytesRead: Int
+//                    while (input.read(buffer).also { bytesRead = it } != -1) {
+//                        sink.write(buffer, 0, bytesRead)
+//                    }
+//                }
+//            }
+//        }
+
+//        val requestBodyCover= object : RequestBody() {
+//            val mediaType = "image/jpeg".toMediaTypeOrNull()
+//            override fun contentType(): MediaType? {
+//                return mediaType
+//            }
+//
+//            override fun writeTo(sink: BufferedSink) {
+//                contentResolver.openInputStream(uriCover.value!!)?.use { input ->
+//                    val buffer = ByteArray(4096)
+//                    var bytesRead: Int
+//                    while (input.read(buffer).also { bytesRead = it } != -1) {
+//                        sink.write(buffer, 0, bytesRead)
+//                    }
+//                }
+//            }
+//        }
+
+
+        val body = builderForm2()
+//            .addFormDataPart("typeId",storeTypeId)
+//            .addFormDataPart("name",name)
+//            .addFormDataPart("logo", "file1.jpg", requestBodyIcon)
+//            .addFormDataPart("cover", "file2.jpg", requestBodyCover)
+            .build()
+
+        requestServer.request2(body,"getMainCategories",{code,fail->
+            stateController.errorStateAUD(fail)
+        }
+        ){it->
+           mainCategories =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
+
+//            CustomSingleton.stores += result
+//            CustomSingleton.selectedStore = result
+//            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
+//            isShowAddCatgory.value = false
+            stateController.successStateAUD()
+        }
+    }
+    private fun addStore(name: String,storeTypeId:String,mainCategoryId: String) {
         stateController.startAud()
 
         val requestBodyIcon = object : RequestBody() {
@@ -548,11 +650,12 @@ class StoresActivity : ComponentActivity() {
         }
 
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("typeId",storeTypeId)
             .addFormDataPart("name",name)
             .addFormDataPart("logo", "file1.jpg", requestBodyIcon)
             .addFormDataPart("cover", "file2.jpg", requestBodyCover)
+            .addFormDataPart("mainCategoryId", mainCategoryId)
             .build()
 
         requestServer.request2(body,"addStore",{code,fail->
@@ -576,7 +679,7 @@ class StoresActivity : ComponentActivity() {
 
 
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId",storeId)
             .addFormDataPart("typeId","2")
             .addFormDataPart("name",name)
@@ -673,6 +776,10 @@ class StoresActivity : ComponentActivity() {
     }
     private fun gotoSettings() {
         val intent = Intent(this, SettingsActivity::class.java)
+        startActivity(intent)
+    }
+    private fun gotoAddStore() {
+        val intent = Intent(this, AddStoreActivity::class.java)
         startActivity(intent)
     }
     private fun gotoStoreOrders() {
@@ -783,3 +890,10 @@ data class RemoteConfigModel(
     val SUB_FOLDER_USERS_LOGOS: String,
     val VERSION:String = "v1"
 )
+
+@Serializable
+data class MainCategory(val id:Int,val name :String,val image:String)
+
+
+@Serializable
+data class MainData(val mainCategories:List<MainCategory>,val currencies :List<Currency>)

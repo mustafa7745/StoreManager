@@ -10,4 +10,8 @@
     <string name="policyUse">Policy</string>
     <string name="termSeivec">Conditions</string>
     <string name="Go">Go</string>
+    <string name="prosessconfirm">Prosess Confirmation</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">ok</string>
+    <string name="tryagian">جرب مرة اخرى</string>
 </resources>

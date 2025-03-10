@@ -353,7 +353,7 @@ private fun add(sectionId: String) {
             .addFormDataPart("storeCategoryId",storeCategory.id.toString())
             .build()
 
-        requestServer.request(body,"${U1R.BASE_URL}${U1R.VERSION}/${U1R.TYPE}/addStoreSection",{code,fail->
+        requestServer.request2(body,"addStoreSection",{code,fail->
             stateController.errorStateAUD(fail)
         }
         ){it->

@@ -1,6 +1,5 @@
 package com.fekraplatform.storemanger.activities
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,9 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,27 +42,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.fekraplatform.storemanger.Singlton.SelectedStore
 import com.fekraplatform.storemanger.models.DeliveryMan
-import com.fekraplatform.storemanger.models.Order
-import com.fekraplatform.storemanger.models.Store
-import com.fekraplatform.storemanger.shared.CustomCard
+import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
-import com.fekraplatform.storemanger.shared.CustomImageViewUri
-import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
-import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
-import kotlinx.serialization.encodeToString
-import okhttp3.MediaType
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody
-import okio.BufferedSink
 
 
 class StoreDeliveryMenActivity : ComponentActivity() {
@@ -110,7 +96,7 @@ class StoreDeliveryMenActivity : ComponentActivity() {
                             }
                         }
                         itemsIndexed(deliveryMen){ index, order ->
-                            CustomCard( modifierBox = Modifier.fillMaxSize().clickable {
+                            CustomCard2( modifierBox = Modifier.fillMaxSize().clickable {
 
                             }) {
                                 Column {
@@ -129,7 +115,7 @@ class StoreDeliveryMenActivity : ComponentActivity() {
     fun read() {
         stateController.startRead()
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId",SelectedStore.store.value!!.id.toString())
             .build()
 
@@ -221,7 +207,7 @@ class StoreDeliveryMenActivity : ComponentActivity() {
     private fun addStore(phone: String) {
         stateController.startAud()
 
-        val body = builderForm3()
+        val body = builderForm2()
             .addFormDataPart("storeId",SelectedStore.store.value!!.id.toString())
             .addFormDataPart("phone", phone)
             .build()

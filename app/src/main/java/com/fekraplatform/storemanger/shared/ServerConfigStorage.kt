@@ -1,17 +1,11 @@
 package com.fekraplatform.storemanger.shared
 
 import GetStorage
-import android.util.Log
 import com.fekraplatform.storemanger.activities.RemoteConfigModel
-import com.fekraplatform.storemanger.activities.SingletonHome.home
-import com.fekraplatform.storemanger.activities.SingletonHome.homeStorage
-import com.fekraplatform.storemanger.activities.SingletonHome.stateController
 import com.fekraplatform.storemanger.activities.getCurrentDate
-import com.fekraplatform.storemanger.models.AccessToken
-import java.time.Duration
 import java.time.LocalDateTime
 
-class ServerConfig {
+class ServerConfigStorage {
     private val inventory = "config"
     private val getStorage = GetStorage(inventory);
     private val remoteConfig = "rc"

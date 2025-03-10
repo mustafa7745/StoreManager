@@ -13,9 +13,22 @@ data class Store(
     val deliveryPrice:Double,
     val currencyId:Int,
     val currencyName: String,
+    val storeCurrencies:List<StoreCurrency>,
     val app: App?,
     val subscription: Subscription,
     var storeConfig:StoreConfig?
+)
+
+@Serializable
+data class StoreCurrency(
+    val id: Int,
+    val currencyId:Int,
+    val currencyName:String,
+    val lessCartPrice: Double,
+    val freeDeliveryPrice:Double,
+    val deliveryPrice: Double,
+    val isSelected:Int,
+    val countUsed: Int,
 )
 
 @Serializable
