@@ -1,8 +1,8 @@
 package com.fekraplatform.storemanger.shared
 
 import GetStorage
-import com.fekraplatform.storemanger.activities.RemoteConfigModel
 import com.fekraplatform.storemanger.activities.getCurrentDate
+import com.fekraplatform.storemanger.models.RemoteConfigModel
 import java.time.LocalDateTime
 
 class ServerConfigStorage {
@@ -10,6 +10,7 @@ class ServerConfigStorage {
     private val getStorage = GetStorage(inventory);
     private val remoteConfig = "rc"
     private val subscribeApp = "sa"
+    private val appToken = "appToken"
     private val dateKey = "dateKey"
 
     fun setRemoteConfig(data:String){
@@ -31,6 +32,24 @@ class ServerConfigStorage {
 //            diff <= 1
         }catch (e:Exception){
             setRemoteConfig("")
+            false
+        }
+    }
+
+
+    fun setAppToken(data:String){
+        getStorage.setData(appToken, data)
+    }
+
+    fun getAppToken(): String {
+        return getStorage.getData(appToken)
+    }
+
+    fun isSetAppToken():Boolean{
+        return try {
+            return getAppToken().isNotEmpty() && getAppToken() != ""
+        }catch (e:Exception){
+            setAppToken("")
             false
         }
     }

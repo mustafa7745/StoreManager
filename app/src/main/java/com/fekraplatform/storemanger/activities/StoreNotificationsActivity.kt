@@ -49,12 +49,12 @@ import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.builderForm2
+import com.fekraplatform.storemanger.shared.confirmDialog2
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 
 class StoreNotificationsActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
     val stateController = StateController()
-    var userInfo by mutableStateOf<UserInfo?>(null)
 
     val pages = listOf(
         PageModel("",0),
@@ -112,8 +112,6 @@ class StoreNotificationsActivity : ComponentActivity() {
 
     @Composable
     private fun SendNotificationPage() {
-
-
         val radioOptions = listOf(
             CustomOption(1,"اشعار نصي"),
             CustomOption(2,"اشعار نصي مع الصورة"),
@@ -155,7 +153,7 @@ class StoreNotificationsActivity : ComponentActivity() {
                         Button(
                             modifier = Modifier.fillMaxWidth().padding(8.dp),
                             onClick = {
-                                confirmDialog(this@StoreNotificationsActivity) {
+                                confirmDialog2(this@StoreNotificationsActivity) {
                                     addNotification(it,title,description)
                                 }
 
@@ -205,23 +203,6 @@ class StoreNotificationsActivity : ComponentActivity() {
             finish()
     }
 
-    ///
-    private fun readUserProfile() {
-        stateController.startAud()
-        val body = builderForm2().build()
-
-        requestServer.request2(body, "getUserProfile", { code, fail ->
-            stateController.errorStateAUD(fail)
-        }
-        ) { data ->
-            val result: UserInfo =
-                MyJson.IgnoreUnknownKeys.decodeFromString(
-                    data
-                )
-            userInfo= result
-            stateController.successStateAUD()
-        }
-    }
     private fun addNotification(password:String,title:String,description:String) {
         stateController.startAud()
         val body = builderForm2()
@@ -238,12 +219,5 @@ class StoreNotificationsActivity : ComponentActivity() {
 
             stateController.successStateAUD("تمت   بنجاح")
         }
-    }
-    private fun gotoLogin() {
-        val intent =
-            Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-        startActivity(intent)
-        finish()
     }
 }

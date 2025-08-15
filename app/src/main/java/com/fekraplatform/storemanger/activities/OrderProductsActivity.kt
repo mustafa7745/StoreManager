@@ -7,7 +7,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,14 +23,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,24 +46,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.Singlton.SelectedStore
-import com.fekraplatform.storemanger.models.DeliveryMan
+import com.fekraplatform.storemanger.models.StoreDeliveryMan
 import com.fekraplatform.storemanger.models.OrderComponent
 import com.fekraplatform.storemanger.models.OrderDelivery
 import com.fekraplatform.storemanger.models.OrderProduct
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
-import com.fekraplatform.storemanger.shared.CustomIcon2
 import com.fekraplatform.storemanger.shared.CustomRow
-import com.fekraplatform.storemanger.shared.CustomRow2
 import com.fekraplatform.storemanger.shared.CustomSingleton2
-import com.fekraplatform.storemanger.shared.IconDelete
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
@@ -74,7 +75,7 @@ class OrderProductsActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
     private var orderComponent by mutableStateOf<OrderComponent?>(null)
-    private var deliveryMen by mutableStateOf<List<DeliveryMan>>(listOf())
+    private var deliveryMen by mutableStateOf<List<StoreDeliveryMan>>(listOf())
 //    lateinit var order: Order
     lateinit var orderProductO: OrderProduct
 
@@ -102,278 +103,481 @@ class OrderProductsActivity : ComponentActivity() {
         setContent {
             StoreMangerTheme {
                 MainCompose1(
-                    0.dp, stateController, this,{
-                         read()
+                    0.dp, stateController, this, {
+                        read()
                     }
-
                 ) {
                     var ids by remember { mutableStateOf<List<Int>>(emptyList()) }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.Top,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
-                    ){
+                    ) {
                         stickyHeader {
-                            if (CustomSingleton2.selectedStoreOrder!!.situationId !in listOf(Situations.CANCELED,Situations.COMPLETED) )
-                                CustomCard2(modifierBox = Modifier.fillMaxWidth().padding(8.dp)) {
-
-                                    Text( " رقم الطلب: " + CustomSingleton2.selectedStoreOrder!! .id.toString(),Modifier.padding(8.dp))
-                                    Text( "الحالة : " + CustomSingleton2.selectedStoreOrder!!.situation.toString(),Modifier.padding(8.dp))
-                                    Text( " اسم المستخدم : "+CustomSingleton2.selectedStoreOrder!!.userName.toString(),Modifier.padding(8.dp))
-                                    Text( "تاريخ الطلب : "+CustomSingleton2.selectedStoreOrder!!.createdAt.toString(),Modifier.padding(8.dp))
-                                    Text(  " رقم المستخدم : "+ CustomSingleton2.selectedStoreOrder!!.userPhone.toString(),
-                                        Modifier
-                                            .padding(8.dp)
-                                            .clickable {
-                            //                                                intentFunUrl("tel:${CustomSingleton2.selectedStoreOrder!!.userPhone}")
-                                            })
-                                    Text(
-                                        text = CustomSingleton2.selectedStoreOrder!!.amounts.joinToString(
-                                            separator = " و "
-                                        ) { formatPrice(it.amount)  +" "+ it.currencyName },
-                                        fontSize = 14.sp,
-                                    )
-
-
-                                    Button(onClick = {
-
-                                        cancelOrder()
-                                    }) { Text("الغاء الطلب") }
-                                }
-                        }
-                        item {
-                            CustomCard2(
-                                modifierBox = Modifier
-                                    .fillMaxSize()
-                                    .clickable {
-
-                                    }
-                            ){
-                                Column {
-                                    CustomRow  {
-                                        Text("معلومات الدفع", fontSize = 20.sp)
-                                        Image(
-                                            painter = rememberImagePainter(R.drawable.epay),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(50.dp)
-                                                .padding(bottom = 8.dp)
-                                                .border(
-                                                    1.dp,
-                                                    MaterialTheme.colorScheme.primary,
-                                                    RoundedCornerShape(
-                                                        16.dp
-                                                    )
-                                                )
-                                                .clip(
-                                                    RoundedCornerShape(
-                                                        16.dp
-                                                    ))
+                            if (CustomSingleton2.selectedStoreOrder!!.situationId !in listOf(Situations.CANCELED, Situations.COMPLETED)) {
+                                ElevatedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            "رقم الطلب: ${CustomSingleton2.selectedStoreOrder!!.id}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
                                         )
-                                    }
-                                    HorizontalDivider(Modifier.padding(8.dp))
-
-                                    CustomRow2 {
-                                        Text(" طريقة الدفع : ")
-                                        Text(if (orderComponent!!.orderDetail.paid == 0) "عند التوصيل" else "الكترونيا")
-                                    }
-
-                                    if (orderComponent!!.orderPayment != null){
-                                        CustomRow {
-                                            Text("معلومات الدفع الالكتروني:")
-                                            AsyncImage(
-                                                modifier = Modifier
-                                                    .size(50.dp)
-                                                    .padding(10.dp),
-                                                model = orderComponent!!.orderPayment!!.paymentImage,
-                                                contentDescription = null
+                                        
+                                        Surface(
+                                            color = when(CustomSingleton2.selectedStoreOrder!!.situation) {
+                                                "مكتمل" -> Color(0xFF4CAF50)
+                                                "قيد المعالجة" -> Color(0xFFFFA000)
+                                                else -> MaterialTheme.colorScheme.secondary
+                                            },
+                                            shape = RoundedCornerShape(16.dp)
+                                        ) {
+                                            Text(
+                                                CustomSingleton2.selectedStoreOrder!!.situation.toString(),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelMedium
                                             )
                                         }
 
-                                        CustomRow2 {
-                                            Text("الدفع عن طريق: ")
-                                            Text(orderComponent!!.orderPayment!!.paymentName)
+                                        Text(
+                                            "اسم المستخدم: ${CustomSingleton2.selectedStoreOrder!!.userName}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        
+                                        Text(
+                                            "تاريخ الطلب: ${CustomSingleton2.selectedStoreOrder!!.createdAt}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "رقم المستخدم: ${CustomSingleton2.selectedStoreOrder!!.userPhone}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            
+                                            IconButton(
+                                                onClick = {
+//                                                    intentFunUrl("tel:${CustomSingleton2.selectedStoreOrder!!.userPhone}")
+                                                }
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Phone,
+                                                    contentDescription = "Call",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
-                                        CustomRow2 {
-                                            Text("تاريخ الدفع: ")
-                                            Text(orderComponent!!.orderPayment!!.createdAt)
+
+                                        Text(
+                                            text = CustomSingleton2.selectedStoreOrder!!.amounts.joinToString(
+                                                separator = " و "
+                                            ) { formatPrice(it.amount) + " " + it.currencyName },
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Button(
+                                                onClick = { cancelOrder() },
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("الغاء الطلب")
+                                            }
+                                            
+                                            Button(
+                                                onClick = { completeOrder() },
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("تسليم الطلب")
+                                            }
                                         }
-                                    } else{
-                                        Text(  if (orderComponent!!.orderDetail.paid != 0) "لم يتم ادخال كود الشراء بعد" else "لم يتم الدفع بعد" ,Modifier.padding(8.dp))
                                     }
-
-
                                 }
-
-
                             }
-                            HorizontalDivider()
                         }
-                        item {
-                            CustomCard2(
-                                modifierBox = Modifier
-                                    .fillMaxSize()
-                                    .clickable {
 
-                                    }
-                            ){
-                                Column {
-                                    CustomRow  {
-                                        Text("معلومات التوصيل", fontSize = 20.sp)
-                                        Image(
-                                            painter = rememberImagePainter(R.drawable.delivery),
+                        item {
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp)),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "معلومات الدفع",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        
+                                        AsyncImage(
+                                            model = R.drawable.epay,
                                             contentDescription = null,
                                             modifier = Modifier
                                                 .size(50.dp)
-                                                .padding(bottom = 8.dp)
+                                                .clip(RoundedCornerShape(16.dp))
                                                 .border(
                                                     1.dp,
                                                     MaterialTheme.colorScheme.primary,
-                                                    RoundedCornerShape(
-                                                        16.dp
-                                                    )
+                                                    RoundedCornerShape(16.dp)
                                                 )
-                                                .clip(
-                                                    RoundedCornerShape(
-                                                        16.dp
-                                                    ))
                                         )
                                     }
-                                    HorizontalDivider(Modifier.padding(8.dp))
-                                    if (orderComponent!!.orderDelivery != null){
 
-                                        if (orderComponent!!.orderDelivery!!.deliveryMan != null){
-                                            CustomRow2 {
-                                                Text("موصل الطلب: ")
-                                                Text(orderComponent!!.orderDelivery!!.deliveryMan!!.firstName,
-                                                    Modifier
-                                                        .padding(8.dp)
-                                                        .clickable {
-                                                            isShowChooseDeliveryMan = true
-                                                        })
+                                    HorizontalDivider()
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "طريقة الدفع:",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            if (orderComponent!!.orderDetail.paid == 0) "عند التوصيل" else "الكترونيا",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+
+                                    if (orderComponent!!.orderPayment != null) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    "معلومات الدفع الالكتروني:",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                AsyncImage(
+                                                    modifier = Modifier
+                                                        .size(50.dp)
+                                                        .padding(10.dp),
+                                                    model = orderComponent!!.orderPayment!!.paymentImage,
+                                                    contentDescription = null
+                                                )
                                             }
 
-                                        }else{
-                                            CustomRow {
-                                                Text("موصل الطلب: ")
-                                                Button(onClick = {
-                                                    isShowChooseDeliveryMan =true
-                                                }) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    "الدفع عن طريق:",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    orderComponent!!.orderPayment!!.paymentName,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    "تاريخ الدفع:",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    orderComponent!!.orderPayment!!.createdAt,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            if (orderComponent!!.orderDetail.paid != 0) "لم يتم ادخال كود الشراء بعد" else "لم يتم الدفع بعد",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp)),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "معلومات التوصيل",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        
+                                        AsyncImage(
+                                            model = R.drawable.delivery,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(50.dp)
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.primary,
+                                                    RoundedCornerShape(16.dp)
+                                                )
+                                        )
+                                    }
+
+                                    HorizontalDivider()
+
+                                    if (orderComponent!!.orderDelivery != null) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            if (orderComponent!!.orderDelivery!!.storeDeliveryMan != null) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        "موصل الطلب:",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        orderComponent!!.orderDelivery!!.storeDeliveryMan!!.firstName,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.clickable {
+                                                            isShowChooseDeliveryMan = true
+                                                        }
+                                                    )
+                                                }
+                                            } else {
+                                                Button(
+                                                    onClick = { isShowChooseDeliveryMan = true },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                ) {
                                                     Text("اختيار موصل الطلب")
                                                 }
                                             }
-                                        }
-                                        Text("موقع توصيل الطلب: ")
-                                        CustomRow2 {
-                                            Text("شارع: ")
-                                            Text(orderComponent!!.orderDelivery!!.street)
 
-                                        }
-                                        CustomRow2 {
-                                            Text("الموقع على الخريطه: ")
-                                            CustomIcon(Icons.Default.Place,true) {
-                                                val googleMapsUrl = "https://www.google.com/maps?q=${orderComponent!!.orderDelivery!!.latLng}"
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(googleMapsUrl))
-                                                startActivity(intent)}
-                                        }
+                                            Text(
+                                                "موقع توصيل الطلب:",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
 
-                                    }else{
-                                        Text("هذا الطلب بدون توصيل")
-                                    }
-                                }
-
-
-                            }
-                            HorizontalDivider()
-
-                        }
-                        stickyHeader {
-                            CustomCard2(modifierBox = Modifier) {
-                                CustomRow {
-                                    CustomIcon2(Icons.Default.Add, modifierIcon = Modifier,true) {
-
-                                    }
-                                    IconDelete(ids) {
-                                        deleteOrderProducts(ids){
-                                            ids = emptyList()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        itemsIndexed(orderComponent!!.orderProducts) { index: Int, orderProduct:OrderProduct ->
-
-                            CustomCard2(
-                                modifierBox = Modifier
-                                    .fillMaxSize()
-                                    .clickable {
-
-                                    }
-                            ) {
-
-
-                                Column {
-
-                        //                                    Log.e(
-                        //                                        "image", SingletonRemoteConfig.remoteConfig.BASE_IMAGE_URL +
-                        //                                                SingletonRemoteConfig.remoteConfig.SUB_FOLDER_PRODUCT +
-                        //                                                cartProduct.product.images.first()
-                        //                                    )
-                                    Row(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(orderProduct.productName)
-                                        Text(orderProduct.optionName)
-                                        CustomIcon(Icons.Outlined.MoreVert,true) {
-                                            orderProductO =orderProduct
-                                            isShowControllProduct = true
-                                        }
-                                        Checkbox(checked = ids.find { it == orderProduct.id } != null, onCheckedChange = {
-                                            val itemC = ids.find { it == orderProduct.id}
-                                            if (itemC == null) {
-                                                ids = ids + orderProduct.id
-                                            }else{
-                                                ids = ids - orderProduct.id
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    "شارع:",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    orderComponent!!.orderDelivery!!.street,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
                                             }
-                                        })
-                        //                                            Text(
-                        //                                                modifier = Modifier.padding(8.dp),
-                        //                                                text = formatPrice(orderProduct.price.toString()) +" "+ orderProduct.currencyName,
-                        //                                                fontWeight = FontWeight.Bold,
-                        ////                                                color = MaterialTheme.colorScheme.primary
-                        //                                            )
-                        //                                            ADControll(
-                        //                                                orderProduct.product,
-                        //                                                option.productOption
-                        //                                            )
-                                    }
-                                    Row(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(formatPrice((orderProduct.price).toString()))
-                                        Text(orderProduct.quantity.toString())
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    "الموقع على الخريطه:",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                IconButton(
+                                                    onClick = {
+                                                        val googleMapsUrl = "https://www.google.com/maps?q=${orderComponent!!.orderDelivery!!.latLng}"
+                                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(googleMapsUrl))
+                                                        startActivity(intent)
+                                                    }
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Place,
+                                                        contentDescription = "View on Map",
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
                                         Text(
-                                            modifier = Modifier.padding(8.dp),
-                                            text = formatPrice((orderProduct.price * orderProduct.quantity).toString()) +" "+ orderProduct.currencyName,
-                                            fontWeight = FontWeight.Bold,
-                        //                                                color = MaterialTheme.colorScheme.primary
+                                            "هذا الطلب بدون توصيل",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                        //                                            ADControll(
-                        //                                                orderProduct.product,
-                        //                                                option.productOption
-                        //                                            )
+                                    }
+                                }
+                            }
+                        }
+
+                        stickyHeader {
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { /* TODO */ }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = "Add",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    
+                                    IconButton(
+                                        onClick = { deleteOrderProducts(ids) { ids = emptyList() } },
+                                        enabled = ids.isNotEmpty()
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.MoreVert,
+                                            contentDescription = "Delete",
+                                            tint = if (ids.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        itemsIndexed(orderComponent!!.orderProducts) { index, orderProduct ->
+                            ElevatedCard (
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp)),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                orderProduct.productName,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                orderProduct.optionName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            IconButton (
+                                                onClick = {
+                                                    orderProductO = orderProduct
+                                                    isShowControllProduct = true
+                                                }
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.MoreVert,
+                                                    contentDescription = "Options",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                            
+                                            Checkbox(
+                                                checked = ids.contains(orderProduct.id),
+                                                onCheckedChange = { checked ->
+                                                    ids = if (checked) ids + orderProduct.id else ids - orderProduct.id
+                                                }
+                                            )
+                                        }
                                     }
 
+                                    HorizontalDivider()
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "السعر: ${formatPrice(orderProduct.price.toString())}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        
+                                        Text(
+                                            "الكمية: ${orderProduct.quantity}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        
+                                        Text(
+                                            "المجموع: ${formatPrice((orderProduct.price * orderProduct.quantity).toString())} ${orderProduct.currencyName}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -402,7 +606,7 @@ class OrderProductsActivity : ComponentActivity() {
                     data
                 )
             if (CustomSingleton2.selectedStoreOrder!!.situationId == Situations.NEW){
-                CustomSingleton2.selectedStoreOrder = CustomSingleton2.selectedStoreOrder!!.copy(situationId = Situations.VIEWD, situation = "تم الاطلاع")
+                CustomSingleton2.selectedStoreOrder = CustomSingleton2.selectedStoreOrder!!.copy(situationId = Situations.VIEWED, situation = "تم الاطلاع")
                 updateOrders()
             }
 
@@ -487,6 +691,22 @@ class OrderProductsActivity : ComponentActivity() {
             stateController.successStateAUD()
         }
     }
+    fun completeOrder() {
+        stateController.startAud()
+
+        val body = builderForm3()
+            .addFormDataPart("orderId",CustomSingleton2.selectedStoreOrder!!.id.toString())
+            .build()
+
+        requestServer.request2(body, "completeOrder", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+            CustomSingleton2.selectedStoreOrder = CustomSingleton2.selectedStoreOrder!!.copy(situationId = Situations.COMPLETED, situation = "تم الغاء الطلب")
+            updateOrders()
+            stateController.successStateAUD()
+        }
+    }
     fun chooseDeliveryMan(id:String) {
         stateController.startAud()
 
@@ -551,8 +771,8 @@ class OrderProductsActivity : ComponentActivity() {
             .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
 
 // Check if deliveryMan is not null and add the corresponding part to the form data
-        if (orderComponent!!.orderDelivery!= null && orderComponent!!.orderDelivery!!.deliveryMan != null) {
-            body.addFormDataPart("deliveryManId", orderComponent!!.orderDelivery!!.deliveryMan!!.id.toString())
+        if (orderComponent!!.orderDelivery!= null && orderComponent!!.orderDelivery!!.storeDeliveryMan != null) {
+            body.addFormDataPart("deliveryManId", orderComponent!!.orderDelivery!!.storeDeliveryMan!!.id.toString())
         }
 
 //        body.build()

@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePickerDialog
@@ -50,9 +53,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
@@ -70,6 +75,7 @@ import com.fekraplatform.storemanger.models.PageModel
 import com.fekraplatform.storemanger.models.StoreCurrency
 import com.fekraplatform.storemanger.shared.confirmDialog
 import com.fekraplatform.storemanger.shared.CustomCard2
+import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.CustomRow
 import com.fekraplatform.storemanger.shared.CustomRow2
 import com.fekraplatform.storemanger.shared.CustomSingleton
@@ -79,6 +85,7 @@ import com.fekraplatform.storemanger.shared.MyJson
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.builderForm3
+import com.fekraplatform.storemanger.shared.confirmDialog2
 import com.fekraplatform.storemanger.shared.formatPrice
 import com.fekraplatform.storemanger.storage.GoogleBillingStorage
 import com.fekraplatform.storemanger.storage.MyBilling
@@ -141,24 +148,13 @@ class SettingsStoreActivity : ComponentActivity() {
                 ) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
+                        .fillMaxSize(),
                     verticalArrangement = Arrangement.Top,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     stickyHeader {
-                        MyHeader({
-                            backHandler()
-                        }) {
-                            Row {
-                                Text("اعدادات المتجر")
-                                if (page != pages.first()) {
-                                    Text(" | ")
-                                    Text(page.pageName)
-                                }
-                            }
+                        Header()
 
-                        }
                     }
 
                     if (page.pageId == 0)
@@ -233,135 +229,24 @@ class SettingsStoreActivity : ComponentActivity() {
                     Text("العملات والتسعير", modifier = Modifier.padding(14.dp), fontWeight = FontWeight.Bold)
                     SettingItem("عملات المتجر"){getStoreCurrencies()}
                     SettingItem("سعر التوصيل"){ isShowUpdateDeliveryPrice = true}
-                    SettingItem("اقل مبلغ يمكن طليه"){}
-                    SettingItem("توصيل مجاني للطلبات الاكبر من"){}
                 }
                 }
-        }
-
-
-        stickyHeader {
-            Text("الاشتراكات والنقاط")
-            HorizontalDivider()
         }
         item {
-            CustomCard2(modifierBox = Modifier
-                .fillMaxSize()
-                .clickable {
-
-                }) {
-                CustomRow {
-                    Text("نوع الاشتراك", Modifier.padding(8.dp))
-                    if (CustomSingleton.isPremiumStore()) {
-                        Text("Premium", Modifier.padding(8.dp))
-                    }
-        //                    else {
-                    Button(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        onClick = {
-                            isSubs = "1"
-                            page = pages[1]
-                        }) {
-                        Text("ترقية")
-                    }
-        //                    }
-                }
-                CustomRow {
-
-                    if (CustomSingleton.isPremiumStore()) {
-                        val time = LocalDateTime.parse(
-                            CustomSingleton.selectedStore!!.subscription.expireAt.replace(
-                                " ",
-                                "T"
-                            )
-                        )
-                        val diff = Duration.between(getCurrentDate(), time).toDays()
-                        Text("الايام المتبقية", Modifier.padding(8.dp))
-                        Text(diff.toString(), Modifier.padding(8.dp))
-        //                        if (diff <= 5) {
-        //                            Button(
-        //                                modifier = Modifier.fillMaxWidth().padding(8.dp),
-        //                                onClick = {
-        //                                isSubs = "1"
-        //                                page = pages[1]
-        //                            }) {
-        //                                Text("تجديد ")
-        //                            }
-        //                        } else {
-        //
-        //
-        //                        }
-
-                    }
-                }
-            }
-        }
-        if (CustomSingleton.isPremiumStore())
-            if (CustomSingleton.selectedStore!!.app != null) {
-                item {
-                    CustomCard2(modifierBox = Modifier
-                        .fillMaxSize()
-                        .clickable {
-
-                        }) {
-                        Column {
-                            CustomRow {
-                                Text(
-                                    "هذا المتجر لديه تطبيق في متجر التطبيقات",
-                                    Modifier.padding(8.dp)
-                                )
-
-
-                                //                                            else{
-                                //                                            Button(onClick = {
-                                //
-                                //                                            }) {
-                                //                                                Text("ارسال طلب تصدير المتجر الى تطبيق")
-                                //                                            }
-                                //                                        }
-                            }
-                            CustomRow {
-                                Text("اعدادات الخدمة", Modifier.padding(8.dp))
-                                if (CustomSingleton.selectedStore!!.app!!.hasServiceAccount) {
-                                    Button(onClick = {
-                                        getContentServiceAccount.launch("application/json")
-                                    }) {
-                                        Text("تعديل")
-                                    }
-                                } else {
-                                    Button(onClick = {
-                                        getContentServiceAccount.launch("application/json")
-                                    }) {
-                                        Text("اضافه")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        item {
-            CustomCard2(modifierBox = Modifier
-                .fillMaxSize()
-                .clickable {
-
-                }) {
-                CustomRow {
-                    Text("النقاط", Modifier.padding(8.dp))
-                    Text(
-                        CustomSingleton.selectedStore!!.subscription.points.toString(),
-                        Modifier.padding(8.dp)
-                    )
-                }
-                Button(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    onClick = {
-
+            CustomCard2(modifierBox = Modifier) {
+                Column(Modifier.selectableGroup()) {
+                    Text("الاشتراكات والنقاط والتطبيق", modifier = Modifier.padding(14.dp), fontWeight = FontWeight.Bold)
+                    SettingItem("الاشتراكات"){gotoStoreSubdcriptions()}
+                    SettingItem("النقاط"){
                         isSubs = "0"
                         page = pages[2]
-                    }) {
-                    Text("شراء النقاط")
-                }
+                    }
+                    if (CustomSingleton.selectedStore!!.app != null){
+                        val t = if ( CustomSingleton.selectedStore!!.app!!.hasServiceAccount) "تعديل" else "اضافة"
+                        SettingItem("$t اعدادات الخدمة للتطبيق "){
+                            getContentServiceAccount.launch("application/json")}
+                    }
+                    }
             }
         }
 
@@ -486,6 +371,21 @@ class SettingsStoreActivity : ComponentActivity() {
             LaunchedEffect(null) {
                 inAppProducts = emptyList()
                 getInAppProducts()
+            }
+        }
+        item {
+            CustomCard2(modifierBox = Modifier
+                .fillMaxSize()
+                .clickable {
+
+                }) {
+                CustomRow {
+                    Text("النقاط", Modifier.padding(8.dp))
+                    Text(
+                        CustomSingleton.selectedStore!!.subscription.points.toString(),
+                        Modifier.padding(8.dp)
+                    )
+                }
             }
         }
 
@@ -624,6 +524,14 @@ class SettingsStoreActivity : ComponentActivity() {
         startActivity(intent)
 //        finish()
     }
+
+    private fun gotoStoreSubdcriptions() {
+        val intent = Intent(
+            this,
+            SubscriptionsStoreActivity::class.java
+        )
+        startActivity(intent)
+    }
     fun saveFileToCache() {
         val cacheFile = File(cacheDir, "service.json")
         try {
@@ -697,6 +605,31 @@ class SettingsStoreActivity : ComponentActivity() {
                 }
             }
         }
+
+    val purchasesSubsUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
+        when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                if (purchases != null) {
+                    for (purchase in purchases) {
+                        // ✅ تحقق من الدفع وفعّل الاشتراك
+//                        handlePurchase(purchase)
+                    }
+                }
+            }
+
+            BillingClient.BillingResponseCode.USER_CANCELED,
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
+                // ⛔ المستخدم ألغى أو لم يكمل بسبب فشل الدفع
+                stateController.showMessage("لم يتم إتمام عملية الشراء.")
+            }
+
+            else -> {
+                // ⚠️ خطأ آخر
+                stateController.showMessage("حدث خطأ أثناء الشراء: ${billingResult.debugMessage}")
+            }
+        }
+    }
+
 
     private fun setGooglePurchaseStorage(isPending: Boolean, purchase: Purchase) {
         val b = googleBillingStorage.getMyBillings().toMutableList()
@@ -917,6 +850,44 @@ class SettingsStoreActivity : ComponentActivity() {
             }
         }
     }
+    fun querySubscription() {
+        val productList = listOf(
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId("premium_access")  // نفس الـ ID الموجود في Play Console
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+        )
+
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(productList)
+            .build()
+
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                if (productDetailsList.isNotEmpty()) {
+                    showPurchaseScreen(productDetailsList[0])
+                }
+            }
+        }
+    }
+    fun showPurchaseScreen(productDetails: ProductDetails) {
+        val offerToken = productDetails.subscriptionOfferDetails?.get(0)?.offerToken
+
+        val billingParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(
+                listOf(
+                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                        .setProductDetails(productDetails)
+                        .setOfferToken(offerToken!!)  // تأكد أنه ليس null
+                        .build()
+                )
+            )
+            .build()
+
+        billingClient.launchBillingFlow(this, billingParams)
+    }
+
+
     private fun startConnection(onFail: (String) -> Unit, onSuccess: () -> Unit) {
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
@@ -953,8 +924,9 @@ class SettingsStoreActivity : ComponentActivity() {
         if (uri != null){
             uriServiceAccount = uri
 
-            confirmDialog(this) {
+            confirmDialog2(this) {
 
+                Log.e("ssss",it.toString())
                 updateServiceAccount(it)
             }
 
@@ -1420,6 +1392,27 @@ class SettingsStoreActivity : ComponentActivity() {
     }
 
 
+    @Composable
+    private fun Header() {
+        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CustomIcon(Icons.AutoMirrored.Default.ArrowBack) {
+                    backHandler()
+                }
+                Text(
+                    text = "اعدادات المتجر",
+                    color = MaterialTheme.colorScheme.onSurface // ✅ هنا التعديل
+                )
+
+                if (page != pages.first()) {
+                    Text(" | ", color = MaterialTheme.colorScheme.onSurface)
+                    Text(page.pageName, color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+        HorizontalDivider()
+    }
+
     private fun showTimePicker(
         onSuccess: (String) -> Unit,
     ) {
@@ -1432,6 +1425,18 @@ class SettingsStoreActivity : ComponentActivity() {
          },24,50,false).show()
 
     }
+
+//    val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
+//        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
+//            for (purchase in purchases) {
+//                // هنا تحقق من الدفع وفعل الاشتراك
+//            }
+//        } else if (billingResult.responseCode == BillingClient.BillingResponseCode.USER_CANCELED) {
+//            // المستخدم ألغى
+//        } else {
+//            // خطأ آخر
+//        }
+//    }
 }
 
 fun normalizeTimeInput(input: String): String {

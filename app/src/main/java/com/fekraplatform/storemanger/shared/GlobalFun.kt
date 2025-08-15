@@ -2,6 +2,7 @@ package com.fekraplatform.storemanger.shared
 
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.os.Build
 import android.util.Log
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -73,7 +75,7 @@ fun MainCompose1(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = padding),
+            .padding(top = padding).safeDrawingPadding(),
 //        verticalArrangement = verticalArrangement,
 //        horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -143,7 +145,7 @@ fun MainCompose2(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = padding)
-            .safeDrawingPadding(),
+             .statusBarsPadding(),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -259,6 +261,11 @@ fun getRemoteConfig(): FirebaseRemoteConfig {
 }
 
 private fun sharedBuilderForm(): MultipartBody.Builder {
+    val serverConfig = ServerConfigStorage()
+
+    Log.e("ffff",serverConfig.isSetAppToken().toString())
+    val appToken = serverConfig.getAppToken()
+    Log.e("tttt",appToken)
     val appInfoMethod = AppInfoMethod()
     return MultipartBody.Builder()
         .setType(MultipartBody.FORM)
@@ -266,7 +273,15 @@ private fun sharedBuilderForm(): MultipartBody.Builder {
         .addFormDataPart("sha", appInfoMethod.getAppSha())
         .addFormDataPart("packageName", appInfoMethod.getAppPackageName())
         .addFormDataPart("deviceId", appInfoMethod.getDeviceId().toString())
+        .addFormDataPart("appToken", if (serverConfig.isSetAppToken()) appToken else "101")
+        .addFormDataPart("remoteConfigVersion",CustomSingleton.remoteConfig.REMOTE_CONFIG_VERSION.toString())
 }
+
+fun builderFormWithAccessToken(): MultipartBody.Builder {
+    return sharedBuilderForm()
+        .addFormDataPart("accessToken", AToken().getAccessToken().token)
+}
+
 fun builderForm0(): MultipartBody.Builder {
     return sharedBuilderForm()
         .addFormDataPart("model", Build.MODEL)
@@ -527,4 +542,75 @@ fun confirmDialog(context: Context, message:String = "", withTextField: Boolean 
 
         s.show()
     }
+fun confirmDialog3(
+    context: Context,
+    message: String = "",
+    text: String? = null,
+    onSuccess: (data: String) -> Unit
+) {
+    val builder = android.app.AlertDialog.Builder(context)
+        .setTitle(context.getString(R.string.prosessconfirm))
+
+    if (message.isNotEmpty()) {
+        builder.setMessage(message)
+    }
+
+    builder.setNegativeButton(context.getString(R.string.cancel)) { _, _ -> }
+
+    var editText: EditText? = null
+
+    if (text != null) {
+        editText = EditText(context).apply {
+            hint = text
+        }
+        val layout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(editText)
+        }
+        builder.setView(layout)
+    }
+
+    builder.setPositiveButton(context.getString(R.string.ok)) { _, _ ->
+        val input = editText?.text?.toString()?.trim() ?: ""
+        onSuccess(input)
+    }
+
+    builder.show()
+}
+
+
+
+fun confirmDialog2(context: Context, message: String = "", onSuccess: (data: String) -> Unit) {
+    val builder = AlertDialog.Builder(context)
+        .setTitle(context.getString(R.string.prosessconfirm))
+
+    if (message.isNotEmpty()) {
+        builder.setMessage(message)
+    }
+
+    val editText = EditText(context).apply {
+        hint = "Enter Password App here"
+    }
+
+    val layout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(50, 20, 50, 10) // padding اختياري لتحسين الشكل
+        addView(editText)
+    }
+
+    builder.setView(layout)
+
+    builder.setNegativeButton(context.getString(R.string.cancel)) { dialog, _ ->
+        dialog.dismiss()
+    }
+
+    builder.setPositiveButton(context.getString(R.string.ok)) { dialog, _ ->
+        val userInput = editText.text.toString().trim()
+        onSuccess(userInput)
+    }
+
+    builder.show()
+}
+
+
 

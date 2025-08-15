@@ -258,9 +258,9 @@ class ProductsStorageDBManager(context: Context) : SQLiteOpenHelper(context, DAT
             do {
                 val id = cursor.getString(cursor.getColumnIndex(ProductImagesStructure.COLUMN_ID))
                 val imagePath = cursor.getString(cursor.getColumnIndex(ProductImagesStructure.COLUMN_IMAGE))
-
-                val image = ProductImage(id.toInt(), imagePath)
-                imagesList.add(image)
+//
+//                val image = ProductImage(id.toInt(), imagePath)
+//                imagesList.add(image)
             } while (cursor.moveToNext())
         }
         cursor.close()

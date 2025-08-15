@@ -76,6 +76,7 @@ import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.storage.MyAppStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.ktx.messaging
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -89,13 +90,24 @@ import okio.BufferedSink
 class StoresActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
-    val isShowAddCatgory = mutableStateOf(false)
     val isShowUpdateStore = mutableStateOf(false)
     private lateinit var storeToUpdate: Store
     var uriLogo=mutableStateOf<Uri?>(null)
     var uriCover =mutableStateOf<Uri?>(null)
-    var isHaveMore by mutableStateOf(false)
-    var mainCategories by mutableStateOf<List<MainCategory>>(emptyList())
+
+    private fun getAppToken(){
+        if (!requestServer.serverConfig.isSetAppToken()){
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.w("FCM Token", "Token fetch failed", task.exception)
+                    return@addOnCompleteListener
+                }
+                val token = task.result
+                Log.d("FCM Token", "Token: $token")
+                requestServer.serverConfig.setAppToken(token)
+            }
+        }
+    }
 
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,10 +143,26 @@ class StoresActivity : ComponentActivity() {
                                                     storeToUpdate = CustomSingleton.selectedStore!!
                                                     isShowUpdateStore.value = true
                                                 },
-                                            imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_LOGOS+CustomSingleton.selectedStore!!.logo,
+                                            imageUrl = CustomSingleton.remoteConfig.BASE_IMAGE_URL+CustomSingleton.remoteConfig.SUB_FOLDER_STORE_LOGOS+CustomSingleton.selectedStore!!.logo,
                                         )
-                                    }
 
+                                        Row (verticalAlignment = Alignment.CenterVertically){
+                                            CustomImageView1(
+                                                modifier = Modifier
+                                                    .size(50.dp)
+                                                    .padding(8.dp)
+                                                    .clickable {
+
+                                                        storeToUpdate = CustomSingleton.selectedStore!!
+                                                        isShowUpdateStore.value = true
+                                                    },
+                                                imageUrl = CustomSingleton.remoteConfig.BASE_IMAGE_URL+CustomSingleton.remoteConfig.SUB_FOLDER_STORE_COVERS + CustomSingleton.selectedStore!!.cover,
+                                            )
+                                            Text(CustomSingleton.selectedStore!!.storeMainCategory.storeMainCategoryName)
+                                        }
+
+
+                                    }
                                 }
 
                                 item {
@@ -191,18 +219,31 @@ class StoresActivity : ComponentActivity() {
                             }
                             else if(CustomSingleton.stores.isEmpty()){
                                 item {
-                                    Text("أنشئ متجرك الالكتروني وابدأ في تحقيق ارباحك")
-                                    Button(
-                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                        onClick = {
-                                        isShowAddCatgory.value = true
-                                    }) {
-                                        Text("اضافة متجر جديد")
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "أنشئ متجرك الالكتروني وابدأ في تحقيق أرباحك",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.padding(vertical = 8.dp)
+                                        )
+
+                                        Button(
+                                            onClick = { gotoAddStore() },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 8.dp)
+                                        ) {
+                                            Text("إضافة متجر جديد")
+                                        }
                                     }
                                 }
                             }
                         }
-                        if (isShowAddCatgory.value) modalAddMyCategory()
                         if (isShowUpdateStore.value) modalUpdateStore()
 
                     }
@@ -210,166 +251,6 @@ class StoresActivity : ComponentActivity() {
         }
     }
 
-    ///Modals
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    private fun modalAddMyCategory() {
-
-        if (mainCategories.isEmpty())readMainCategories()
-
-        ModalBottomSheet(
-            onDismissRequest = { isShowAddCatgory.value = false }) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 10.dp)
-            ){
-                var storeName by remember { mutableStateOf("") }
-                LazyColumn(
-                    Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Top
-                ) {
-
-                    item {
-                        CustomCard2(modifierBox =  Modifier) {
-                            OutlinedTextField(
-                                modifier = Modifier.padding(8.dp),
-                                value = storeName,
-                                onValueChange = {
-                                    storeName = it
-                                },
-                                label = {
-                                    Text("اسم المتجر")
-                                }
-                            )
-                            Text("شعار المتجر", modifier = Modifier.padding(12.dp) )
-                            Card(
-                                Modifier
-                                    .size(100.dp)
-                                    .padding(8.dp)
-                                    .clickable {
-                                        getContentlogo.launch("image/*")
-                                    }) {
-                    //                            if (){
-                                if (uriLogo.value != null)
-                                    CustomImageViewUri(
-                                        modifier =  Modifier.fillParentMaxSize(),
-                                        imageUrl =  uriLogo.value!!,
-                                        contentScale = ContentScale.Inside
-                                    )else{
-                                    CustomImageViewUri(
-                                        imageUrl =  R.drawable.baseline_add_card_24,
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                    //                            }
-                            }
-
-                            Text("صورة غلاف المتجر", modifier = Modifier.padding(12.dp) )
-                            Card(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .padding(8.dp)
-                                    .clickable {
-                                        getContentCover.launch("image/*")
-                                    }) {
-
-                                if (uriCover.value != null){
-                                    CustomImageViewUri(
-                                        modifier =  Modifier.fillParentMaxSize(),
-                                        imageUrl =  uriCover.value!! ,
-                                        contentScale = ContentScale.Inside
-                                    )
-                                }else{
-                                    CustomImageViewUri(
-                                        imageUrl =  R.drawable.baseline_add_card_24,
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-
-                    //
-                            }
-
-                            val radioOptions = listOf(
-                                CustomOption(1,"متجر مشترك"),
-                                CustomOption(2,"متجر مخصص"),
-                            )
-                            var selectedOption by remember { mutableStateOf<CustomOption?>(null) }
-
-                            Text("نوع المتجر", modifier = Modifier.padding(14.dp))
-                            radioOptions.forEach { text ->
-                                Row(
-                                    Modifier.fillMaxWidth().height(56.dp)
-                                        .selectable(
-                                            selected = (text == selectedOption),
-                                            onClick = {
-                                                selectedOption = text
-                    //                                    if (selectedOption.id == 2 ){
-                    ////                                        selectedLocation = null
-                    //                                    }
-                    //
-                    //                                    onOptionSelected(text)
-
-                                            },
-                                            role = Role.RadioButton
-                                        ).padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                )
-                                {
-                                    RadioButton(selected = (text == selectedOption), onClick = null)
-                                    Text(text = text.name,style = MaterialTheme. typography. bodyLarge,modifier = Modifier. padding(start = 16.dp))
-                                }
-                            }
-                            Text("اختر الفئة الملائمة لمتجرك ")
-                            var selectedCategory by remember { mutableStateOf<MainCategory?>(null) }
-                            LazyHorizontalGrid (
-                                rows = GridCells.Fixed(2),
-                                modifier = Modifier
-                                    .height(220.dp)
-                                    .padding(8.dp)
-                                    .background(Color.White)
-                            ) {
-
-                                itemsIndexed(mainCategories){index: Int, item: MainCategory ->
-                                    Column (horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
-                                        .padding(2.dp)
-                                        .width(100.dp)
-                                        .background(if (selectedCategory == item) Color.Gray else Color.Transparent)
-                                        .clickable { selectedCategory = item }){
-                                        CustomImageView1(
-                                            modifier = Modifier
-                                                .border(
-                                                    1.dp,
-                                                    MaterialTheme.colorScheme.primary, CircleShape
-                                                )
-                                                .clip(CircleShape)
-                                                .size(50.dp)
-                                            ,
-                                            imageUrl = item.image,
-                                            contentScale = ContentScale.Crop
-                                        )
-                                        Text(item.name, textAlign = TextAlign.Center, fontSize = 12.sp , overflow = TextOverflow.Ellipsis, softWrap = true, modifier = Modifier.height(50.dp))
-
-                                    }
-                                }
-                            }
-
-                            Button(
-                                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                enabled = storeName.length > 5 && uriLogo.value != null && uriCover.value != null && selectedOption != null && selectedCategory != null ,
-                                onClick = {
-                                    addStore(storeName,selectedOption!!.id.toString(),selectedCategory!!.id.toString())
-                                }) {
-                                Text("اضافة")
-                            }
-
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -554,131 +435,9 @@ class StoresActivity : ComponentActivity() {
             stateController.successState()
         }
     }
-    private fun readMainCategories() {
-        stateController.startAud()
 
-//        val requestBodyIcon = object : RequestBody() {
-//            val mediaType = "image/jpeg".toMediaTypeOrNull()
-//            override fun contentType(): MediaType? {
-//                return mediaType
-//            }
-//
-//            override fun writeTo(sink: BufferedSink) {
-//                contentResolver.openInputStream(uriLogo.value!!)?.use { input ->
-//                    val buffer = ByteArray(4096)
-//                    var bytesRead: Int
-//                    while (input.read(buffer).also { bytesRead = it } != -1) {
-//                        sink.write(buffer, 0, bytesRead)
-//                    }
-//                }
-//            }
-//        }
-
-//        val requestBodyCover= object : RequestBody() {
-//            val mediaType = "image/jpeg".toMediaTypeOrNull()
-//            override fun contentType(): MediaType? {
-//                return mediaType
-//            }
-//
-//            override fun writeTo(sink: BufferedSink) {
-//                contentResolver.openInputStream(uriCover.value!!)?.use { input ->
-//                    val buffer = ByteArray(4096)
-//                    var bytesRead: Int
-//                    while (input.read(buffer).also { bytesRead = it } != -1) {
-//                        sink.write(buffer, 0, bytesRead)
-//                    }
-//                }
-//            }
-//        }
-
-
-        val body = builderForm2()
-//            .addFormDataPart("typeId",storeTypeId)
-//            .addFormDataPart("name",name)
-//            .addFormDataPart("logo", "file1.jpg", requestBodyIcon)
-//            .addFormDataPart("cover", "file2.jpg", requestBodyCover)
-            .build()
-
-        requestServer.request2(body,"getMainCategories",{code,fail->
-            stateController.errorStateAUD(fail)
-        }
-        ){it->
-           mainCategories =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
-
-//            CustomSingleton.stores += result
-//            CustomSingleton.selectedStore = result
-//            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
-//            isShowAddCatgory.value = false
-            stateController.successStateAUD()
-        }
-    }
-    private fun addStore(name: String,storeTypeId:String,mainCategoryId: String) {
-        stateController.startAud()
-
-        val requestBodyIcon = object : RequestBody() {
-            val mediaType = "image/jpeg".toMediaTypeOrNull()
-            override fun contentType(): MediaType? {
-                return mediaType
-            }
-
-            override fun writeTo(sink: BufferedSink) {
-                contentResolver.openInputStream(uriLogo.value!!)?.use { input ->
-                    val buffer = ByteArray(4096)
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        sink.write(buffer, 0, bytesRead)
-                    }
-                }
-            }
-        }
-
-        val requestBodyCover= object : RequestBody() {
-            val mediaType = "image/jpeg".toMediaTypeOrNull()
-            override fun contentType(): MediaType? {
-                return mediaType
-            }
-
-            override fun writeTo(sink: BufferedSink) {
-                contentResolver.openInputStream(uriCover.value!!)?.use { input ->
-                    val buffer = ByteArray(4096)
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        sink.write(buffer, 0, bytesRead)
-                    }
-                }
-            }
-        }
-
-
-        val body = builderForm2()
-            .addFormDataPart("typeId",storeTypeId)
-            .addFormDataPart("name",name)
-            .addFormDataPart("logo", "file1.jpg", requestBodyIcon)
-            .addFormDataPart("cover", "file2.jpg", requestBodyCover)
-            .addFormDataPart("mainCategoryId", mainCategoryId)
-            .build()
-
-        requestServer.request2(body,"addStore",{code,fail->
-            stateController.errorStateAUD(fail)
-        }
-        ){it->
-            val result: Store =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
-
-            CustomSingleton.stores += result
-            CustomSingleton.selectedStore = result
-//            homeStorage.setHome(MyJson.IgnoreUnknownKeys.encodeToString(SingletonHome.home.value!!),SingletonStoreConfig.storeId)
-            isShowAddCatgory.value = false
-            stateController.successStateAUD("تمت الاضافه  بنجاح")
-        }
-    }
     private fun updateStore(storeId:String,name: String) {
         stateController.startAud()
-
-
-
-
-
-
         val body = builderForm2()
             .addFormDataPart("storeId",storeId)
             .addFormDataPart("typeId","2")
@@ -750,22 +509,7 @@ class StoresActivity : ComponentActivity() {
 
         }
     }
-    private fun deleteStores(ids:List<Int>,onDone:()->Unit) {
-        stateController.startAud()
-        //
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("ids",ids.toString())
-            .build()
 
-        requestServer.request2(body,"deleteStores",{code,fail->
-            stateController.errorStateAUD(fail)
-        }
-        ){it->
-            onDone()
-            stateController.successStateAUD()
-        }
-    }
     //goto
     private fun gotoLogin() {
         val intent =
@@ -844,9 +588,12 @@ class StoresActivity : ComponentActivity() {
         }else{
             setLocale(this,myAppStorage.getLang().code)
         }
+        getAppToken()
+
         if (!requestServer.serverConfig.isSetSubscribeApp()) {
             subscribeToAppTopic()
         }
+
         if (!requestServer.serverConfig.isSetRemoteConfig()) {
             stateController.startRead()
             requestServer.initVarConfig({
@@ -879,21 +626,3 @@ class StoresActivity : ComponentActivity() {
     }
 }
 
-@Serializable
-data class RemoteConfigModel(
-    val TYPE_STORE_MANAGER: String,
-    val SUB_FOLDER_STORE_COVERS: String,
-    val SUB_FOLDER_PRODUCT: String,
-    val BASE_IMAGE_URL: String,
-    val BASE_URL: String,
-    val SUB_FOLDER_STORE_LOGOS: String,
-    val SUB_FOLDER_USERS_LOGOS: String,
-    val VERSION:String = "v1"
-)
-
-@Serializable
-data class MainCategory(val id:Int,val name :String,val image:String)
-
-
-@Serializable
-data class MainData(val mainCategories:List<MainCategory>,val currencies :List<Currency>)

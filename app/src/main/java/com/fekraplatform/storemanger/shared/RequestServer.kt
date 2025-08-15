@@ -10,8 +10,8 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import com.fekraplatform.storemanger.activities.StoresActivity
 import com.fekraplatform.storemanger.activities.LoginActivity
-import com.fekraplatform.storemanger.activities.RemoteConfigModel
 import com.fekraplatform.storemanger.models.ErrorMessage
+import com.fekraplatform.storemanger.models.RemoteConfigModel
 import com.google.firebase.remoteconfig.remoteConfigSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,10 +28,15 @@ import java.util.concurrent.TimeUnit
 
 class RequestServer(private val activity: ComponentActivity) {
     val serverConfig = ServerConfigStorage()
-    fun initVarConfig(onFail:()->Unit, onSuccess: () -> Unit) {
+    fun initVarConfig(onFail:(String)->Unit, onSuccess: () -> Unit) {
+
+        if (!isInternetAvailable()){
+            onFail("No Intenet")
+            return
+        }
         val remoteConfig = getRemoteConfig()
         val configSettings = remoteConfigSettings {
-            minimumFetchIntervalInSeconds = 3600 // 1 hour
+            minimumFetchIntervalInSeconds = 5 // 1 hour
             fetchTimeoutInSeconds = 60 // 60 seconds
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
@@ -45,17 +50,25 @@ class RequestServer(private val activity: ComponentActivity) {
                         jsonObject.put(key, value.asString())
                     }
 
-                    val myRemoteConfig = MyJson.IgnoreUnknownKeys.decodeFromString<RemoteConfigModel>(
-                        jsonObject.toString()
-                    )
-                    serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(myRemoteConfig))
+                    Log.e("Config Json",jsonObject.toString())
+
+                    try {
+                        val myRemoteConfig = MyJson.IgnoreUnknownKeys.decodeFromString<RemoteConfigModel>(
+                            jsonObject.toString()
+                        )
+                        serverConfig.setRemoteConfig(MyJson.IgnoreUnknownKeys.encodeToString(myRemoteConfig))
+                    }
+                    catch (e:Exception){
+                        onFail(e.message.toString())
+                    }
+
 //                    remoteConfigInRequest = SingletonRemoteConfig.remoteConfig
                     onSuccess()
 //                stateController.successStateAUD()
                 } else {
 //                stateController.errorStateAUD("frc")
-                    onFail()
-                    Log.e("RemoteConfig", "Failed to fetch remote config", task.exception)
+                    onFail("Failed to fetch remote config"+task.exception)
+//                    Log.e("RemoteConfig", "Failed to fetch remote config", )
                 }
             }
     }
@@ -116,6 +129,13 @@ class RequestServer(private val activity: ComponentActivity) {
                                     2000 -> {//invalid access token
                                         AToken().setAccessToken("")
                                         gotoLogin()
+                                    }
+                                    3000 -> {
+                                        initVarConfig({ fail->
+                                            onFail(3000,fail)
+                                        }) {
+                                            onFail(0,"config updated refresh again")
+                                        }
                                     }
 
                                     else -> {

@@ -10,8 +10,13 @@
     <string name="policyUse">Policy</string>
     <string name="termSeivec">Conditions</string>
     <string name="Go">Go</string>
-    <string name="prosessconfirm">Prosess Confirmation</string>
+    <string name="prosessconfirm">Process Confirmation</string>
     <string name="cancel">Cancel</string>
-    <string name="ok">ok</string>
-    <string name="tryagian">جرب مرة اخرى</string>
+    <string name="ok">Ok</string>
+    <string name="tryagian">Try Again Later</string>
+    <string name="success_update">Updated Successfully</string>
+    <string name="success_delete">Deleted Successfully</string>
+    <string name="success_add">Added Successfully</string>
+    <string name="confirm_delete">Confirm Delete?</string>
+    <string name="success_send">Success Send</string>
 </resources>

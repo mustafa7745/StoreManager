@@ -23,7 +23,7 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCnwhwO-jKSK8zcbcfeVFPKE0S4F4Y1m-Q" />
         <activity
-            android:name=".activities.StoresActivity"
+            android:name=".activities1.StoresActivity1"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
@@ -34,59 +34,85 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".activities.StoreCategoriesActivity"
+            android:name=".activities1.ProfileActivity1"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".activities.LoginActivity"
+            android:name=".activities1.SubscriptionsStoreActivity1"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.StoreManger">
+        </activity>
+
+        <activity
+            android:name=".activities1.StoreCategoriesActivity1"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.StoreManger">
+        </activity>
+        <activity
+            android:name=".activities1.LoginActivity1"
             android:windowSoftInputMode="adjustResize"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
+
         <activity
-            android:name=".activities.StoreSectionsActivity"
+            android:name=".activities1.StoreSectionsActivity1"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".activities.AddStoreActivity"
+            android:name=".activities1.ProductOptionsActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".activities.StoreNestedSectionsActivity"
+            android:name=".activities1.AddStoreActivity1"
             android:label="@string/app_name"
             android:theme="@style/Theme.StoreManger">
         </activity>
         <activity
-            android:name=".activities.ProductsActivity"
+            android:name=".activities1.ProductsActivity"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.StoreManger">
+        </activity>
+        <activity
+            android:name=".activities1.StoreNestedSectionsActivity1"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.StoreManger">
+        </activity>
+        <activity
+            android:name=".activities1.StoreProductsActivity"
             android:exported="false"/>
         <activity
-            android:name=".activities.LocationStoreActivity"
+            android:name=".activities1.LocationStoreActivity1"
             android:exported="false"/>
 
         <activity
-            android:name=".activities.SettingsStoreActivity"
+            android:name=".activities1.SettingsStoreActivity1"
             android:exported="false"/>
 
         <activity
-            android:name=".activities.StoreOrdersActivity"
+            android:name=".activities1.StoreOrdersActivity1"
             android:exported="false"/>
         <activity
-            android:name=".activities.OrderProductsActivity"
+            android:name=".activities1.StoreCouponsActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities1.OrderProductsActivity1"
             android:exported="false"/>
         <activity
-            android:name=".activities.StoreDeliveryMenActivity"
+            android:name=".activities1.StoreDeliveryMenActivity1"
             android:exported="false"/>
         <activity
-            android:name=".activities.SettingsActivity"
+            android:name=".activities1.SettingsActivity1"
             android:exported="false"/>
         <activity
-            android:name=".activities.AdsActivity"
+            android:name=".activities1.AdsActivity1"
             android:exported="false"/>
         <activity
-            android:name=".activities.StoreNotificationsActivity"
+            android:name=".activities1.StoreNotificationsActivity1"
             android:windowSoftInputMode="adjustResize"
             android:exported="false"/>
 

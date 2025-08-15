@@ -5,6 +5,7 @@ plugins {
     kotlin("plugin.serialization") version "1.8.10"
     id("com.google.gms.google-services")
     id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -15,14 +16,24 @@ android {
         applicationId = "com.fekraplatform.storemanger"
         minSdk = 23
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.0"
+        versionCode = 24
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("D:/Persons/Mustafa/key1.jks")
+            storePassword = "Mu771212577"
+            keyAlias = "key0"
+            keyPassword = "Mu771212577"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -53,6 +64,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.googleid)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -81,9 +93,25 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 //    implementation(libs.firebase.admin)
+    implementation("androidx.room:room-ktx:$room_version")
 
     val billing_version = "7.1.1"
 
     implementation("com.android.billingclient:billing:$billing_version")
+
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+
+
+    implementation ("com.google.dagger:hilt-android:2.56.2")
+    ksp ("com.google.dagger:hilt-compiler:2.56.2")
+    implementation ("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("androidx.security:security-crypto:1.1.0-beta01")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("com.google.crypto.tink:tink-android:1.8.0")
+    implementation ("androidx.compose.material:material-icons-extended")
+
+
 
 }

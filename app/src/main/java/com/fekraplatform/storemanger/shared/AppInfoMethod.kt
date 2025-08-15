@@ -15,9 +15,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
+import javax.inject.Inject
 
 
-class AppInfoMethod {
+class AppInfoMethod @Inject constructor() {
 
     @SuppressLint("HardwareIds")
     fun getDeviceId(): String? {

@@ -3,12 +3,11 @@ package com.fekraplatform.storemanger.shared
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.fekraplatform.storemanger.activities.RemoteConfigModel
 import com.fekraplatform.storemanger.models.CustomPrice
 import com.fekraplatform.storemanger.models.ProductView
+import com.fekraplatform.storemanger.models.RemoteConfigModel
 import com.fekraplatform.storemanger.models.Store
-import com.fekraplatform.storemanger.models.StoreOrders
-import com.fekraplatform.storemanger.models.StoreProduct
+import com.google.android.gms.maps.model.LatLng
 import java.time.LocalDateTime
 
 object CustomSingleton {
@@ -37,18 +36,17 @@ object CustomSingleton {
     fun isPremiumStore(): Boolean {
         return selectedStore!!.subscription.isPremium == 1
     }
-    ////
-    private var storeOrders by mutableStateOf<StoreOrders?>(null)
-    var selectedStoreOrder by mutableStateOf<Store?>(null)
+    var location: LatLng? = null
 }
 
 object Situations {
-    const val VIEWD = 4
+    const val VIEWED = 2
     const val NEW = 1
-    const val COMPLETED = 2
-    const val CANCELED = 3
-    const val ASSIGN_DELIVERY_MAN = 5
-    const val PREPARING = 6
+    const val COMPLETED = 10000
+    const val CANCELED = 9999
+    const val ASSIGN_DELIVERY_MAN = 3
+    const val PREPARING = 5
+    const val SYSTEM_ORDER_READY = 4
     const val AT_WAY = 7
 }
 

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Add
@@ -52,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,12 +90,7 @@ import com.fekraplatform.storemanger.shared.U1R
 import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.shared.builderForm3
 import com.fekraplatform.storemanger.shared.formatPrice
-import com.fekraplatform.storemanger.storage.AppDatabase
-import com.fekraplatform.storemanger.storage.Date
-import com.fekraplatform.storemanger.storage.Images
-import com.fekraplatform.storemanger.storage.ProductViews
 import com.fekraplatform.storemanger.storage.ProductsStorageDBManager
-import com.fekraplatform.storemanger.storage.StoreProducts
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -238,9 +238,7 @@ class ProductsActivity : ComponentActivity() {
                             }
                         }
 
-                        item {
-                            SingletonStoreConfig.EditModeCompose()
-                        }
+
 
 
 //                        val r = storeProducts.value
@@ -732,156 +730,156 @@ class ProductsActivity : ComponentActivity() {
         getCurrentDate()
     )
 
-    fun getProductViews(db: AppDatabase): List<ProductView> {
-        val storeProducts =
-            db.storeProductsDao().loadAllByIds(storeId.toInt(), storeNestedSection.id)
-        val productIds = mutableListOf<Int>()
-        storeProducts.forEach {
-            productIds.add(it.productId)
-        }
-        val images = db.imagesDao().loadAllByIds(productIds.toIntArray())
-
-        val storeProducts0 = getStoreProducts(storeProducts, images)
-
-        val productViews0 = db.productViewDao().loadDate()
-        var productViews1: List<ProductView> = emptyList()
-
-        productViews0.forEach {
-            val prods = emptyList<StoreProduct>().toMutableList()
-            storeProducts0.forEach { storeProduct ->
-                if (it.id == storeProduct.product.productViewId) {
-                    prods += storeProduct
-                }
-            }
-            productViews1 += ProductView(it.id, it.name, prods.toList())
-        }
-        return productViews1
-    }
+//    fun getProductViews(db: AppDatabase): List<ProductView> {
+////        val storeProducts =
+////            db.storeProductsDao().loadAllByIds(storeId.toInt(), storeNestedSection.id)
+////        val productIds = mutableListOf<Int>()
+////        storeProducts.forEach {
+////            productIds.add(it.productId)
+////        }
+////        val images = db.imagesDao().loadAllByIds(productIds.toIntArray())
+////
+////        val storeProducts0 = getStoreProducts(storeProducts, images)
+////
+////        val productViews0 = db.productViewDao().loadDate()
+////        var productViews1: List<ProductView> = emptyList()
+////
+////        productViews0.forEach {
+////            val prods = emptyList<StoreProduct>().toMutableList()
+////            storeProducts0.forEach { storeProduct ->
+////                if (it.id == storeProduct.product.productViewId) {
+////                    prods += storeProduct
+////                }
+////            }
+////            productViews1 += ProductView(it.id, it.name, prods.toList())
+////        }
+////        return productViews1
+//    }
 
     private fun processData() {
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java, "dbb"
-        ).build()
+//        val db = Room.databaseBuilder(
+//            applicationContext,
+//            AppDatabase::class.java, "dbb"
+//        ).build()
 
 
         CoroutineScope(Dispatchers.IO).launch {
-            val insertedDate = db.dateDao().loadDate()
-
-            if (insertedDate != null) {
-                val date = LocalDateTime.parse(insertedDate)
-                val diff = Duration.between(date, getCurrentDate()).toSeconds()
-                if (diff <= 30) {
-                    productViews.value = getProductViews(db)
-                } else {
-                    AddData(db)
-                }
-            } else {
-                read {
-                    AddData(db)
-                }
-            }
+//            val insertedDate = db.dateDao().loadDate()
+//
+//            if (insertedDate != null) {
+//                val date = LocalDateTime.parse(insertedDate)
+//                val diff = Duration.between(date, getCurrentDate()).toSeconds()
+//                if (diff <= 30) {
+//                    productViews.value = getProductViews(db)
+//                } else {
+//                    AddData(db)
+//                }
+//            } else {
+//                read {
+//                    AddData(db)
+//                }
+//            }
 
         }
 
     }
 
-    private fun getStoreProducts(
-        storeProducts: List<StoreProducts>,
-        images: List<Images>
-    ): List<StoreProduct> {
-        var result: MutableList<StoreProduct> = mutableListOf()
-
-
-        storeProducts.forEach { storeProduct ->
-            if (!result.any { it.product.productId == storeProduct.productId }) {
-                val imgs = images.filter { it.productId == storeProduct.productId }
-                val newImgs = mutableListOf<ProductImage>()
-                imgs.forEach {
-                    newImgs.add(ProductImage(it.id, it.image))
-                }
-
-                result +=
-                    StoreProduct(
-                        product = Product(
-                            storeProduct.productId,
-                            storeProduct.productViewId,
-                            storeProduct.ProductName,
-                            storeProduct.productDescription,
-                            newImgs
-                        ),
-                        storeNestedSectionId = storeNestedSection.id,
-                        options = emptyList()
-                    )
-
-            }
-
-//            result = result.map { r ->
-//                if (r.product.productId == storeProduct.productId) {
-//                    var newOption = r.options
-//                    newOption += ProductOption(
-//                        storeProduct.optionId,
-//                        Currency(
-//                            storeProduct.currencyId,
-//                            storeProduct.currencyName,
-//                            storeProduct.currencySign
-//                        ), storeProduct.id, storeProduct.optionName, storeProduct.price.toString(),
+//    private fun getStoreProducts(
+//        storeProducts: List<StoreProducts>,
+//        images: List<Images>
+//    ): List<StoreProduct> {
+//        var result: MutableList<StoreProduct> = mutableListOf()
 //
+//
+//        storeProducts.forEach { storeProduct ->
+//            if (!result.any { it.product.productId == storeProduct.productId }) {
+//                val imgs = images.filter { it.productId == storeProduct.productId }
+//                val newImgs = mutableListOf<ProductImage>()
+//                imgs.forEach {
+//                    newImgs.add(ProductImage(it.id, it.image))
+//                }
+//
+//                result +=
+//                    StoreProduct(
+//                        product = Product(
+//                            storeProduct.productId,
+//                            storeProduct.productViewId,
+//                            storeProduct.ProductName,
+//                            storeProduct.productDescription,
+//                            newImgs
+//                        ),
+//                        storeNestedSectionId = storeNestedSection.id,
+//                        options = emptyList()
 //                    )
-//                    r.copy(options = newOption)
-//                } else
-//                    r
 //
-//            }.toMutableList()
+//            }
+//
+////            result = result.map { r ->
+////                if (r.product.productId == storeProduct.productId) {
+////                    var newOption = r.options
+////                    newOption += ProductOption(
+////                        storeProduct.optionId,
+////                        Currency(
+////                            storeProduct.currencyId,
+////                            storeProduct.currencyName,
+////                            storeProduct.currencySign
+////                        ), storeProduct.id, storeProduct.optionName, storeProduct.price.toString(),
+////
+////                    )
+////                    r.copy(options = newOption)
+////                } else
+////                    r
+////
+////            }.toMutableList()
+//
+//        }
+//        return result
+//    }
 
-        }
-        return result
-    }
 
-
-    private fun AddData(db: AppDatabase) {
-        val storeProducts = mutableListOf<StoreProducts>()
-        val productViews0 = db.productViewDao().loadDate()
-        val images = mutableListOf<Images>()
-        productViews.value.forEach { productView ->
-            if (!productViews0.any { it.id == productView.id }) {
-                db.productViewDao().insert(ProductViews(productView.id, productView.name))
-            }
-
-            productView.products.forEach { product ->
-                product.product.images.forEach {
-                    images.add(Images(it.id, it.image, product.product.productId))
-                }
-                product.options.forEach { option ->
-                    val storeProduct = StoreProducts(
-                        option.storeProductId,
-                        product.product.productId,
-                        product.product.productName,
-                        product.product.productDescription.toString(),
-                        storeNestedSection.id,
-                        option.price.toDouble(),
-                        storeId.toInt(),
-                        option.optionId,
-                        option.name,
-                        option.currency.id,
-                        option.currency.name,
-                        option.currency.sign,
-                        productView.id,
-                        productView.name
-                    )
-                    storeProducts.add(storeProduct)
-                }
-            }
-        }
-
-        storeProducts.forEach {
-            db.storeProductsDao().insertAll(it)
-        }
-        images.forEach {
-            db.imagesDao().insert(it)
-        }
-        db.dateDao().insertOrUpdate(Date(1, getCurrentDate().toString()))
-    }
+//    private fun AddData(db: AppDatabase) {
+////        val storeProducts = mutableListOf<StoreProducts>()
+////        val productViews0 = db.productViewDao().loadDate()
+////        val images = mutableListOf<Images>()
+////        productViews.value.forEach { productView ->
+////            if (!productViews0.any { it.id == productView.id }) {
+//////                db.productViewDao().insert(ProductViews(productView.id, productView.name))
+////            }
+////
+////            productView.products.forEach { product ->
+////                product.product.images.forEach {
+////                    images.add(Images(it.id, it.image, product.product.productId))
+////                }
+////                product.options.forEach { option ->
+////                    val storeProduct = StoreProducts(
+////                        option.storeProductId,
+////                        product.product.productId,
+////                        product.product.productName,
+////                        product.product.productDescription.toString(),
+////                        storeNestedSection.id,
+////                        option.price.toDouble(),
+////                        storeId.toInt(),
+////                        option.optionId,
+////                        option.name,
+////                        option.currency.id,
+////                        option.currency.name,
+////                        option.currency.sign,
+////                        productView.id,
+////                        productView.name
+////                    )
+////                    storeProducts.add(storeProduct)
+////                }
+////            }
+////        }
+////
+////        storeProducts.forEach {
+//////            db.storeProductsDao().insertAll(it)
+////        }
+////        images.forEach {
+//////            db.imagesDao().insert(it)
+////        }
+////        db.dateDao().insertOrUpdate(Date(1, getCurrentDate().toString()))
+//    }
 
     fun read(onDone: () -> Unit) {
         stateController.startRead()
@@ -1759,23 +1757,6 @@ class ProductsActivity : ComponentActivity() {
                     item {
 
                         if (uri.value != null) {
-//                            var imageSize by remember { mutableStateOf<Pair<Int, Int>?>(null) } // To store image width and height
-//                            var imageFileSizeInMB by remember { mutableStateOf<Float?>(null) } // To store image size in MB
-
-//                            val bitmap = inputStream?.let { BitmapFactory.decodeStream(it) }
-//                            bitmap?.let {
-//                                imageSize = Pair(it.width, it.height) // Store the image resolution
-//                            }
-////                            Log.e("inputss",inputStream!!. .toString())
-//                            // Get the image file size in MB
-//                            val file = File(uri.value!!.path!!)
-//                            Log.e("ffff",file.path .toString())
-//                            Log.e("ffff1",file.length() .toString())
-//                            Log.e("ffff2",file.toString())
-//                            val fileSizeInBytes = file.length()
-//                            Log.e("sssii",fileSizeInBytes.toString())
-//                            imageFileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFloat()
-//                            Log.e("sssiiMM",imageFileSizeInMB.toString())
 
                             CustomImageViewUri(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1793,12 +1774,50 @@ class ProductsActivity : ComponentActivity() {
 //                                )
 //                            }
 
-//                        if (inputStream != null){
+                            if (uri.value != null) {
+                                val type = contentResolver.getType(uri.value!!)
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    Text(text = "PNG", modifier = Modifier.padding(end = 8.dp))
+
+                                    Icon(
+                                        imageVector = if (type == "image/png") Icons.Default.Check else Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = if (type == "image/png") Color.Green else Color.Red
+                                    )
+                                }
+                            }
+
+
                             Button(
                                 onClick = {
-                                    val inputStream = contentResolver.openInputStream(uri.value!!)
-                                    addImage(inputStream)
-                                },
+                                    val uriVal = uri.value ?: return@Button
+
+                                    val type = contentResolver.getType(uriVal)
+                                    if (type != "image/png") {
+                                        stateController.errorStateAUD("الصورة يجب أن تكون بصيغة PNG")
+                                        return@Button
+                                    }
+
+                                    try {
+                                        val inputStream = contentResolver.openInputStream(uriVal)
+                                        val sizeInBytes = inputStream?.available() ?: 0
+                                        val sizeInKB = sizeInBytes / 1024
+
+                                        if (sizeInKB > 300) {
+                                            stateController.errorStateAUD("حجم الصورة يجب أن يكون أقل من 300 كيلوبايت")
+                                            return@Button
+                                        }
+
+                                        addImage(inputStream)
+                                    } catch (e: Exception) {
+                                        stateController.errorStateAUD("فشل في تحميل الصورة: ${e.message}")
+                                    }
+                                }
+                                ,
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(8.dp)
@@ -2635,6 +2654,7 @@ class ProductsActivity : ComponentActivity() {
                         data
                     )
 
+                stateController.successStateAUD()
             }
         }
 
@@ -2818,7 +2838,7 @@ class ProductsActivity : ComponentActivity() {
                                                     .padding(8.dp)
                                                     .clickable {
                                                         if (currencies.value.isEmpty()) {
-                                                            readCurrencies()
+                                                            readCurrencies(false)
                                                         }
                                                         expanded = !expanded
                                                     },

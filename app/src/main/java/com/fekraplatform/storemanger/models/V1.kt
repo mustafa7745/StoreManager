@@ -1,5 +1,9 @@
 package com.fekraplatform.storemanger.models
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.fekraplatform.storemanger.activities1.OrderEntity
+import com.fekraplatform.storemanger.activities1.OrderSituationEntity
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -9,14 +13,14 @@ data class Store(
     val name: String,
     val logo : String,
     val cover : String,
+    val timezone : String,
     var latLng:String?,
     val deliveryPrice:Double,
-    val currencyId:Int,
-    val currencyName: String,
     val storeCurrencies:List<StoreCurrency>,
     val app: App?,
     val subscription: Subscription,
-    var storeConfig:StoreConfig?
+    var storeConfig:StoreConfig?,
+    val storeMainCategory: StoreMainCategory
 )
 
 @Serializable
@@ -55,12 +59,41 @@ data class Order(
     val amounts:List<OrderAmount>
 )
 
+//@Serializable
+//data class OrderSituation(
+//    val id: Int,
+//    val name: String,
+//    val createdAt: String,
+//    val updatedAt: String,
+//)
 @Serializable
-data class DeliveryMan(
+data class OrdersHome(
+    val situations: List<OrderSituationEntity>,
+    val orders : List<OrderEntity>,
+    val pendingIds : List<Int>,
+    val completedIds : List<Int>
+)
+
+@Serializable
+data class StoreDeliveryMan(
     val id: Int,
+    val deliveryManId:Int,
     val firstName: String,
     val lastName: String,
     val phone: String,
+)
+
+@Serializable
+data class Coupon(
+    val id: Int,
+    val code: String,
+    val isActive: Int,
+    val type: Int,
+    val amount: Double,
+    val currencyId: Int,
+    val used: Int,
+    val countUsed: Int?,
+
 )
 
 @Serializable
@@ -79,7 +112,11 @@ data class OrderDelivery(
     val id: Int,
     val latLng: String,
     val street: String,
-    val deliveryMan: DeliveryMan?,
+    val distance:Int,
+    val duration:Int,
+    val storeDeliveryMan: StoreDeliveryMan?,
+    val deliveryPrice: Double,
+    val currencyName:String,
     val createdAt:String,
     val updatedAt:String,
 )
@@ -108,11 +145,21 @@ data class OrderDetail(
 )
 
 @Serializable
+data class OrderStatus(
+    val id: Int,
+    val situationId: Int,
+    val orderId: Int,
+    val createdAt: String,
+)
+
+@Serializable
 data class OrderComponent(
     val orderDelivery: OrderDelivery?,
-    val orderProducts: List<OrderProduct> ,
+    val orderProducts: List<OrderProduct>,
     val orderPayment: OrderPayment?,
-    val orderDetail: OrderDetail
+    val orderDetail: OrderDetail,
+    val orderCoupon:Coupon?,
+    val orderStatusList:List<OrderStatus>
 ){
     // Example function to update a product in the list
     fun updateOrderProduct(updatedProduct: OrderProduct): OrderComponent {
@@ -121,6 +168,16 @@ data class OrderComponent(
             if (product.id == updatedProduct.id) updatedProduct else product
         }
         return this.copy(orderProducts = updatedProducts)
+    }
+    fun updateOrderDetail(orderDetail: OrderDetail): OrderComponent {
+        // Replace the product with the same id or add it if it doesn't exist
+
+        return this.copy(orderDetail = orderDetail)
+    }
+    fun updateOrderStatusList(orderStatusList:List<OrderStatus>): OrderComponent {
+        // Replace the product with the same id or add it if it doesn't exist
+
+        return this.copy(orderStatusList = orderStatusList)
     }
     fun updateOrderDelivery(updatedDelivery: OrderDelivery): OrderComponent {
 //        // Replace the product with the same id or add it if it doesn't exist
@@ -192,19 +249,86 @@ data class Product(
     val images: List<ProductImage>
 )
 
+@Serializable
+data class PrimaryProduct(
+    val id: Int,
+    val name: String,
+    val storeId: Int,
+    val description: String?
+)
+
+@Serializable
+data class PrimaryProductOption(
+    val id: Int,
+    val storeId: Int,
+    val name: String
+)
+
+@Serializable
+data class PrimaryStoreProduct(
+    val id: Int,
+    val storeNestedSectionId:Int,
+    val name:String,
+    val description:String,
+    val storeId:Int,
+    val productId:Int,
+    val currencyId:Int,
+    val price:Double,
+    val prePrice:Double,
+    val likes:Int,
+    val stars:Int,
+    val reviews:Int,
+    val storeProductViewId:Int,
+    val orderNo:Int,
+    val orderAt:String,
+    val info:List<String>,
+    val createdAt:String,
+    val updatedAt:String
+)
+
+@Serializable
+data class HomeStoreProduct(
+    val products: List<PrimaryProduct>,
+    val options: List<PrimaryProductOption>,
+    val storeProducts: List<PrimaryStoreProduct>,
+    val productsImages: List<ProductImage>
+)
+@Serializable
+data class HomeProduct(
+    val products: List<PrimaryProduct>,
+    val productsImages: List<ProductImage>
+)
+
+
 //@Serializable
 //data class ProductToSelect(
 //    val id:Int,
 //    val name: String
 //)
 ////////
+@Entity(tableName = "store_categories")
 @Serializable
 data class StoreCategory(
-    val id:Int,
+    @PrimaryKey val id:Int,
     val categoryId: Int,
     val categoryName: String,
-
 )
+//@Dao
+//interface StoreCategoryDao {
+//
+//    @Insert(onConflict = OnConflictStrategy.REPLACE)
+//    suspend fun insert(storeCategory: StoreCategory)
+//
+//    @Query("SELECT * FROM store_categories")
+//    suspend fun getAll(): List<StoreCategory>
+//
+//    @Query("SELECT * FROM billing_items WHERE purchaseToken = :token LIMIT 1")
+//    suspend fun getByToken(token: String): BillingEntity?
+//
+//    @Delete
+//    suspend fun delete(billing: BillingEntity)
+//}
+
 
 @Serializable
 data class StoreNestedSection(
@@ -224,10 +348,18 @@ data class StoreSection(
 
 @Serializable
 data class Home(
+    val storeProductViews:List<StoreProductView>,
     val ads :List<Ads>,
     var storeCategories: List<StoreCategory>,
     var storeSections:List<StoreSection>,
     var storeNestedSections:List<StoreNestedSection>
+)
+@Serializable
+data class StoreProductView(
+    val productViewId: Int,
+    val name: String,
+    val storeProductViewId: Int,
+    val storeId: Int,
 )
 
 @Serializable
@@ -302,7 +434,8 @@ data class Currency(
 @Serializable
 data class ProductImage(
     val id : Int,
-    val image: String
+    val image: String,
+    val productId:Int,
 )
 
 @Serializable
@@ -313,8 +446,12 @@ data class UserInfo(
     val secondName: String?,
     val thirdName: String?,
     val lastName: String,
+    val code: String?,
+    val phone: String?,
+    val email: String?,
     val logo: String?,
 )
+
 
 @Serializable
 data class ProductView(
@@ -328,3 +465,31 @@ data class CustomOption (val id:Int, val name:String)
 
 @Serializable
 data class StoreOrders (val situations:List<CustomOption>, val orders:List<Order>)
+
+
+@Serializable
+data class RemoteConfigModel(
+    val TYPE_STORE_MANAGER: String,
+    val SUB_FOLDER_STORE_COVERS: String,
+    val SUB_FOLDER_PRODUCT: String,
+    val BASE_IMAGE_URL: String,
+    val BASE_URL: String,
+    val SUB_FOLDER_STORE_LOGOS: String,
+    val SUB_FOLDER_USERS_LOGOS: String,
+    val VERSION:String = "v1",
+    val REMOTE_CONFIG_VERSION : Int
+)
+
+@Serializable
+data class Location (val id:Int, val street:String, val deliveryPrice: DeliveryPrice,val distance:Int,val duration:Int)
+@Serializable
+data class DeliveryPrice (val currencyId:Int, val deliveryPrice:Double,val currencyName:String)
+
+@Serializable
+data class MainCategory(val id:Int,val name :String,val image:String,val sharedableStores : ArrayList<Int>)
+
+@Serializable
+data class StoreMainCategory(val storeMainCategoryName :String,val storeMainCategoryImage:String)
+
+@Serializable
+data class MainData(val mainCategories:List<MainCategory>,val currencies :List<Currency>)

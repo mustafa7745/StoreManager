@@ -3,40 +3,27 @@ package com.fekraplatform.storemanger.activities
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fekraplatform.storemanger.Singlton.SelectedStore
@@ -85,111 +72,214 @@ class StoreOrdersActivity : ComponentActivity() {
         setContent {
             StoreMangerTheme {
                 MainCompose1(
-                    0.dp, stateController, this,{
+                    0.dp, stateController, this, {
                         readSituations()
                     }
-
                 ) {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.Top,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
-                    ){
+                    ) {
                         stickyHeader {
-                            MyHeader({
-                                finish()
-                            }, {
-                            CustomIcon(Icons.Default.MoreVert) {
-
-                            }
-                            }) {
-                                DropDownDemo()
-                            }
-                            //
-                            CustomCard2(modifierBox = Modifier) {
-                                Row (Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceEvenly
-                                ){
-                                    Text("من: $fromDate", modifier = Modifier.clickable { isShowSelectDate = true
-                                        isFrom = true
-                                    })
-                                    Text("الى: $toDate", modifier = Modifier.clickable { isShowSelectDate = true
-                                        isFrom = false
-                                    })
-                                }
-                            }
-//                                Card(Modifier.fillMaxWidth().height(100.dp).clickable {
-//
-//                                }) {
-//                                    CustomImageView(
-//                                        modifier = Modifier.fillMaxWidth()
-//                                            .height(80.dp)
-//                                            .padding(8.dp)
-//                                            .clickable {
-//
-//                                            },
-//                                        context = this@StoreCategoriesActivity,
-//                                        imageUrl = requestServer.serverConfig.getRemoteConfig().BASE_IMAGE_URL+requestServer.serverConfig.getRemoteConfig().SUB_FOLDER_STORE_COVERS+CustomSingleton.selectedStore!!.cover,
-//                                        okHttpClient = requestServer.createOkHttpClientWithCustomCert()
-//                                    )
-//                                }
-                        }
-
-
-                        itemsIndexed(CustomSingleton2.storeOrders!!.orders){index, order ->
-                            CustomCard2( modifierBox = Modifier
-                                .fillMaxSize()
-                                .clickable {
-
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.background)
+                            ) {
+                                MyHeader({
+                                    finish()
+                                }, {
+                                    CustomIcon(Icons.Default.MoreVert) {
+                                    }
                                 }) {
-                                Column {
-                                    Text( " رقم الطلب: " + order.id.toString(),Modifier.padding(8.dp))
-                                    Text( "الحالة : " + order.situation.toString(),Modifier.padding(8.dp))
-                                    Text( " اسم المستخدم : "+order.userName.toString(),Modifier.padding(8.dp))
-                                    Text( "تاريخ الطلب : "+order.createdAt.toString(),Modifier.padding(8.dp))
-                                    Text(  " رقم المستخدم : "+ order.userPhone.toString(),
+                                    DropDownDemo()
+                                }
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Row(
                                         Modifier
-                                            .padding(8.dp)
-                                            .clickable {
-                                                intentFunUrl("tel:${order.userPhone}")
-                                            })
-                                    Text(
-                                        text = order.amounts.joinToString(
-                                            separator = " و "
-                                        ) { formatPrice(it.amount)  +" "+ it.currencyName },
-                                        fontSize = 14.sp,
-                                    )
-                                    Button(onClick = {
-                                        CustomSingleton2.selectedStoreOrder = order
-                                        gotoOrderProducts()
-                                    }, modifier = Modifier
-                                        .padding(8.dp)
-                                        .fillMaxSize()) {
-                                        Text("الاطلاع على الطلب")
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.clickable { 
+                                                isShowSelectDate = true
+                                                isFrom = true 
+                                            }
+                                        ) {
+                                            Text(
+                                                "من",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                fromDate,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                        
+                                        Divider(
+                                            modifier = Modifier
+                                                .height(24.dp)
+                                                .width(1.dp)
+                                        )
+                                        
+                                        Column(
+                                            modifier = Modifier.clickable { 
+                                                isShowSelectDate = true
+                                                isFrom = false 
+                                            }
+                                        ) {
+                                            Text(
+                                                "الى",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                toDate,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
                                     }
                                 }
+                            }
+                        }
 
+                        itemsIndexed(CustomSingleton2.storeOrders!!.orders) { index, order ->
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { },
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "رقم الطلب: ${order.id}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        
+                                        Surface(
+                                            color = when(order.situation) {
+                                                "مكتمل" -> Color(0xFF4CAF50)
+                                                "قيد المعالجة" -> Color(0xFFFFA000)
+                                                else -> MaterialTheme.colorScheme.secondary
+                                            },
+                                            shape = RoundedCornerShape(16.dp)
+                                        ) {
+                                            Text(
+                                                order.situation.toString(),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                    }
+
+                                    Divider()
+
+                                    Text(
+                                        "اسم المستخدم: ${order.userName}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    
+                                    Text(
+                                        "تاريخ الطلب: ${order.createdAt}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "رقم المستخدم: ${order.userPhone}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        
+                                        IconButton(
+                                            onClick = { intentFunUrl("tel:${order.userPhone}") }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Phone,
+                                                contentDescription = "Call",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = order.amounts.joinToString(separator = " و ") { 
+                                            formatPrice(it.amount) + " " + it.currencyName 
+                                        },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            CustomSingleton2.selectedStoreOrder = order
+                                            gotoOrderProducts()
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            "الاطلاع على الطلب",
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 
                         item {
-                            if (isLoadingMore) CircularProgressIndicator()
-                            else{
-                                if (isHaveMore) Button(onClick = {
-                                    isLoadingMore = true
-                                    read(listOf(selectedCustomOption!!.id).toString()){}
-                                }){ Text("عرض المزيد") }
+                            if (isLoadingMore) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            } else if (isHaveMore) {
+                                Button(
+                                    onClick = {
+                                        isLoadingMore = true
+                                        read(listOf(selectedCustomOption!!.id).toString()) {}
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("عرض المزيد")
+                                }
                             }
                         }
-
                     }
-                    if (isShowSelectDate)DatePickerModal()
-                //                    DatePickerDialog(onDismissRequest = {
-//                        isShowSelectDate = false
-//                    }) { }
+                    
+                    if (isShowSelectDate) DatePickerModal()
                 }
             }
         }
@@ -325,6 +415,7 @@ class StoreOrdersActivity : ComponentActivity() {
             .addFormDataPart("from", if  (isLoadingMore)CustomSingleton2.storeOrders!!.orders.size.toString() else "0")
             .build()
 
+
         requestServer.request2(body, "getOrders", { code, fail ->
             stateController.errorStateAUD(fail)
         }
@@ -362,6 +453,9 @@ class StoreOrdersActivity : ComponentActivity() {
             .addFormDataPart("toDate",toDate)
             .addFormDataPart("from","0")
             .build()
+
+        Log.e("from",fromDate.toString())
+        Log.e("to",toDate.toString())
 
         requestServer.request2(body, "getOrderSituations", { code, fail ->
             stateController.errorStateRead(fail)

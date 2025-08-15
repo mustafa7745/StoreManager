@@ -43,7 +43,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.fekraplatform.storemanger.Singlton.SelectedStore
-import com.fekraplatform.storemanger.models.DeliveryMan
+import com.fekraplatform.storemanger.models.StoreDeliveryMan
 import com.fekraplatform.storemanger.shared.CustomCard2
 import com.fekraplatform.storemanger.shared.CustomIcon
 import com.fekraplatform.storemanger.shared.MainCompose1
@@ -58,7 +58,7 @@ import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
 class StoreDeliveryMenActivity : ComponentActivity() {
     val stateController = StateController()
     val requestServer = RequestServer(this)
-    private var deliveryMen by mutableStateOf<List<DeliveryMan>>(listOf())
+    private var deliveryMen by mutableStateOf<List<StoreDeliveryMan>>(listOf())
 
     var isShowAddDelivery by mutableStateOf(false)
 
@@ -216,7 +216,7 @@ class StoreDeliveryMenActivity : ComponentActivity() {
             stateController.errorStateAUD(fail)
         }
         ){it->
-            val result: DeliveryMan =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
+            val result: StoreDeliveryMan =  MyJson.IgnoreUnknownKeys.decodeFromString(it)
             deliveryMen += result
             isShowAddDelivery = false
             stateController.successStateAUD("تمت الاضافه  بنجاح")

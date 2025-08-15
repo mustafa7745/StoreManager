@@ -2,7 +2,9 @@ package com.fekraplatform.storemanger.activities
 
 import android.Manifest
 import android.app.Activity
+import android.app.Activity.LOCATION_SERVICE
 import android.content.Context
+import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.LocationManager
@@ -13,9 +15,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -44,6 +51,7 @@ import com.fekraplatform.storemanger.shared.CustomIcon2
 import com.fekraplatform.storemanger.shared.CustomSingleton
 import com.fekraplatform.storemanger.shared.MainCompose1
 import com.fekraplatform.storemanger.shared.MainCompose2
+import com.fekraplatform.storemanger.shared.MyHeader
 import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.convertStringToLatLng
@@ -72,103 +80,72 @@ import okhttp3.MultipartBody
 
 
 class LocationStoreActivity : ComponentActivity() {
-    val stateController = StateController()
     val requestServer = RequestServer(this)
-//    lateinit var la: Store
-//    private lateinit var fusedLocationClient: FusedLocationProviderClient
-//    private lateinit var fusedLocationClient: FusedLocationProviderClient
-//    lateinit var locationRequest: LocationRequest
-//    private lateinit var settingsClient: SettingsClient
-//    var isGpsEnabled by mutableStateOf(false)
-//    var location by mutableStateOf<LatLng?>(null)
-    var editMode by mutableStateOf(false)
+    private val stateController = StateController()
+    //
+    val myLocationManager = MyLocationManager(this)
+    var street by mutableStateOf("")
+    var isCurrentLocation by mutableStateOf(true)
 
-
+    @OptIn(ExperimentalLayoutApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        stateController.startRead()
-//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-//        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-//        isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-//        settingsClient = LocationServices.getSettingsClient(this)
-//        locationRequest = LocationRequest.Builder(10000).setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
-        ///
-        initLocation()
-        getCurrentLocation{
-            Log.e("ffffff",location.toString(),)
-            Log.e("selected",CustomSingleton.selectedStore.toString(),)
-            if (CustomSingleton.selectedStore!!.latLng != null){
-                location = convertStringToLatLng(CustomSingleton.selectedStore!!.latLng!!)
-            }
-
-//            location = latLng
-            Log.e("llllll",location.toString(),)
-            stateController.successState()
-        }
+        myLocationManager.initLocation()
 
         setContent {
             StoreMangerTheme {
-                MainCompose1 (
-                    0.dp, stateController, this,{
-                        getCurrentLocation{
-                            Log.e("ffffff",location.toString(),)
-                            Log.e("selected",CustomSingleton.selectedStore.toString(),)
-                            if (CustomSingleton.selectedStore!!.latLng != null){
-                                location = convertStringToLatLng(CustomSingleton.selectedStore!!.latLng!!)
-                            }//            location = latLng
-                            Log.e("llllll",location.toString(),)
-                            stateController.successState()
-                        }
-                    }
-                ) {
-                    Column (
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Top,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ){
-                        if (location != null){
-                            Row {
-                                Button(onClick = {
-
-                                    editMode = !editMode
-                                }) {
-                                    Text(if (editMode) "view mode" else "editMode")
-                                }
-                                if (editMode) Button(onClick = {
-                                    updateLocation()
-                                }) { Text("save") }
-                            }
-
-                            HorizontalDivider()
-                            ComposeMapp()
-                        }
-//                        item {
-
-
-//                        }
+                if (myLocationManager.isLoading){
+                    stateController.startRead()
+                }else{
+                    if (myLocationManager.isSuccess){
+                        stateController.successStateAUD()
+                        stateController.successState()
+                    }else{
+                        stateController.errorStateAUD(myLocationManager.messageLocation)
+                        stateController.errorStateRead(myLocationManager.messageLocation)
                     }
                 }
+
+                MainCompose1(0.dp,stateController,this,{
+                    myLocationManager.initLocation()
+                }){
+                    Column(
+                        Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+
+
+                        MyHeader({
+                            finish()
+                        },{
+
+                        }) {
+                            Text("اضافة موقع للمتجر")
+                        }
+
+                        ComposeMapp()
+                    }
+                }
+
             }
         }
+
     }
 
+    //    var markerState by mutableStateOf(MarkerState(location, "Initial Marker"))
     @Composable
     private fun ComposeMapp() {
-//        var location = LatLng(lat, long)
-        val markerState = rememberMarkerState(position = location!!)
-        markerState.position = location!!
+        var location = if (SelectedStore.store.value!!.latLng == null) myLocationManager.location!! else  convertStringToLatLng(SelectedStore.store.value!!.latLng!!)!!
+        val markerState = rememberMarkerState(position = location)
 
         var cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(location!!, 17f)
+            position = CameraPosition.fromLatLngZoom(location, 16f)
         }
 
         val pinConfig = PinConfig.builder().build()
 
 // Checking if camera is moving and editMode is enabled
-        if (cameraPositionState.isMoving) {
+        if (cameraPositionState.isMoving && !isCurrentLocation) {
             // Update location based on camera's current target position
             val updatedLatLng = LatLng(
                 cameraPositionState.position.target.latitude,
@@ -180,14 +157,30 @@ class LocationStoreActivity : ComponentActivity() {
             markerState.position = updatedLatLng
         }
 
+        Button(
+            onClick = {
+                updateLocation(cameraPositionState.position.target.latitude.toString(), cameraPositionState.position.target.longitude.toString())
+
+//                addLocation( cameraPositionState.position.target.latitude.toString()+ "," + cameraPositionState.position.target.longitude.toString(),)
+//                        updateLocation()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+                .height(50.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(text = "حفظ", color = Color.White, fontSize = 18.sp)
+        }
+
 
 
 
         Box(
-            Modifier.fillMaxWidth().height(400.dp),
+            Modifier.fillMaxSize(),
         ) {
             GoogleMap(
-                modifier = Modifier.fillMaxWidth().fillMaxSize(),
+                Modifier.fillMaxWidth().height(400.dp).align(Alignment.TopCenter),
                 cameraPositionState = cameraPositionState
             ) {
                 AdvancedMarker(
@@ -195,113 +188,105 @@ class LocationStoreActivity : ComponentActivity() {
                     pinConfig = pinConfig
                 )
             }
+            Column (Modifier.fillMaxWidth().align(Alignment.TopCenter)){
 
 
-            CustomIcon2(Icons.Outlined.Place, modifierIcon = Modifier.align(Alignment.TopEnd).padding(8.dp),border = true) {
-                getCurrentLocation{ ll->
-                    markerState.position = ll
-                    val cameraUpdate = CameraUpdateFactory.newCameraPosition(CameraPosition.fromLatLngZoom(location!!, 17f))
-                    cameraPositionState.move(cameraUpdate)
+                if (!isCurrentLocation){
+                    Text(modifier = Modifier.fillMaxWidth().background(Color.LightGray), textAlign = TextAlign.Center, text = "قم بتحريك المؤشر للموقع الذي تريد")
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Button(
+                        modifier =
+                        Modifier.weight(1f)
+                            .padding(8.dp)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        onClick = {
+                            isCurrentLocation = true
+                            stateController.startAud()
+                            myLocationManager.initLocation()
+                            cameraPositionState.move(CameraUpdateFactory.newCameraPosition(CameraPosition.fromLatLngZoom(location, 16f)))
+                            markerState.position = myLocationManager.location!!
+                        }
+                    ) {
+                        Row {
+                            Text("الموقع الحالي")
+                            Icon(
+                                imageVector = Icons.Outlined.Place,
+                                contentDescription = "",
+                                tint = Color.White
+                            )
+                        }
+
+                    }
+                    Button(
+                        modifier =
+                        Modifier.weight(1f)
+                            .padding(8.dp)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        onClick = {
+                            isCurrentLocation = false
+//                    stateController.successStateAUD("")
+//                    stateController.startAud()
+//                    myLocationManager.initLocation()
+//                    cameraPositionState.move(CameraUpdateFactory.newCameraPosition(CameraPosition.fromLatLngZoom(location, 16f)))
+//                    markerState.position = myLocationManager.location!!
+                        }
+                    ) {
+                        Row {
+                            Text("موقع اخر")
+                            Icon(
+                                imageVector = Icons.Outlined.Place,
+                                contentDescription = "",
+                                tint = Color.White
+                            )
+                        }
+
+                    }
                 }
             }
         }
     }
 
-//    @Composable
-//    private fun ComposeMapp() {
-////        var location = LatLng(lat.value, long.value)
-////        val markerState = rememberMarkerState(position = location)
-////        var cameraPositionState = rememberCameraPositionState {
-////            position = CameraPosition.fromLatLngZoom(location, 16f)
-////        }
-////        val pinConfig = PinConfig.builder().build()
-////
-////
-////        if (cameraPositionState.isMoving && editMode) {
-////
-////
-////            location = LatLng(
-////                cameraPositionState.position.target.latitude,
-////                cameraPositionState.position.target.longitude
-////            )
-////            markerState.position = LatLng(
-////                cameraPositionState.position.target.latitude,
-////                cameraPositionState.position.target.longitude
-////            )
-////            lat.value =  cameraPositionState.position.target.latitude
-////            long.value =    cameraPositionState.position.target.longitude
-////        }
-//        var location = LatLng(lat.value, long.value)
-//
-//        val markerState = rememberMarkerState(position = location)
-//
-//        var cameraPositionState = rememberCameraPositionState {
-//            position = CameraPosition.fromLatLngZoom(location, 16f)
-//        }
-//
-//        val pinConfig = PinConfig.builder().build()
-//
-//// Checking if camera is moving and editMode is enabled
-//        if (cameraPositionState.isMoving && editMode) {
-//            // Update location based on camera's current target position
-//            val updatedLatLng = LatLng(
-//                cameraPositionState.position.target.latitude,
-//                cameraPositionState.position.target.longitude
-//            )
-//
-//            // Set new position to markerState and location
-//            location = updatedLatLng
-//            markerState.position = updatedLatLng
-//
-//            // Update the lat and long state variables
-//            lat.value = updatedLatLng.latitude
-//            long.value = updatedLatLng.longitude
-//        }
-//
-//
-//        GoogleMap(
-//            modifier = Modifier.fillMaxWidth().height(400.dp),
-//            cameraPositionState = cameraPositionState
-//        ) {
-//            AdvancedMarker(
-//                state = markerState,
-//                pinConfig = pinConfig
-//            )
-//        }
-//
-//        Box(
-//            Modifier.fillMaxSize(),
-//        ) {
-//            if (editMode)
-//            Button(
-//                onClick = {
-//updateLocation()
-//                },
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .align(Alignment.BottomCenter)
-//                    .padding(8.dp)
-//                    .height(100.dp),
-//                shape = RoundedCornerShape(8.dp)
-//            ) {
-//                Text(text = "حفظ", color = Color.White, fontSize = 18.sp)
-//                //                            ,fontFamily = FontFamily(
-//                ////                            Font(R.font.bukra_bold)
-//                //
-//                //                        ))
-//            }
-//        }
-//    }
+    fun updateLocation(lat:String,long:String) {
+        val latLong = "$lat,$long"
+        stateController.startAud()
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("latLng",latLong)
+            .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
+            .addFormDataPart("latitude", lat)
+            .addFormDataPart("longitude",long)
+            .build()
 
-    /// GPS FUNCTIONS AND CALLBACKES AND VARS
-    // 1) VARS
+        requestServer.request2(body, "updateStoreLocation", { code, fail ->
+            stateController.errorStateAUD(fail)
+        }
+        ) { data ->
+//            val result: Store =
+//                MyJson.IgnoreUnknownKeys.decodeFromString(
+//                    data
+//                )
+            SelectedStore.store.value!! .latLng = latLong
+
+
+            stateController.successStateAUD("تم بنجاح")
+            finish()
+        }
+    }
+
+}
+
+class MyLocationManager(private val activity: ComponentActivity){
+    private var countReShow = 0;
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var settingsClient: SettingsClient
     private var isGpsEnabled by mutableStateOf(false)
-    private var isLoadingStateLocation by mutableStateOf<Boolean>(false)
-    private var isSuccessStateLocation by mutableStateOf<Boolean?>(null)
-    private var messageLocation by mutableStateOf("للحصول على تجربة مميزة فعل الموقع")
+    var isLoading by mutableStateOf<Boolean>(false)
+    var isSuccess by mutableStateOf<Boolean>(false)
+    var messageLocation by mutableStateOf("للحصول على تجربة مميزة فعل الموقع")
     var location by mutableStateOf<LatLng?>(null)
     // 2) Functions
     private fun requestPermissions() {
@@ -314,9 +299,9 @@ class LocationStoreActivity : ComponentActivity() {
             Log.e("f3",isGpsEnabled.toString())
             return
         }
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION
+        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
+                activity,
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -326,9 +311,11 @@ class LocationStoreActivity : ComponentActivity() {
         Log.e("sddd3", "11")
 
         fusedLocationClient. requestLocationUpdates(locationRequest,locationCallback{
-            isSuccessStateLocation = true
-            Log.e("ffffdf2",location.toString())
+//            CustomSingleton.location = it
+            isSuccess = true
             onSuccess(it)
+            isLoading = false
+            isSuccess = true
         }, null)
 //        GlobalScope.launch {
 //            fusedLocationClient.lastLocation
@@ -363,7 +350,7 @@ class LocationStoreActivity : ComponentActivity() {
             .build()
         // Check the settings
         val task: Task<LocationSettingsResponse> = settingsClient.checkLocationSettings(locationSettingsRequest)
-        task.addOnSuccessListener(this, OnSuccessListener<LocationSettingsResponse> {
+        task.addOnSuccessListener(activity, OnSuccessListener<LocationSettingsResponse> {
             // If GPS is enabled, proceed to get the current location
             Log.d("GPS", "GPS is enabled.")
             isGpsEnabled = true
@@ -387,29 +374,44 @@ class LocationStoreActivity : ComponentActivity() {
 
 
     }
-    private fun initLocation() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+    fun initLocation(onSuccess: () -> Unit = {}) {
+        isLoading = true
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(activity)
+        val locationManager = activity.getSystemService(LOCATION_SERVICE) as LocationManager
         isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        settingsClient = LocationServices.getSettingsClient(this)
-        locationRequest =
-            LocationRequest.Builder(10000).setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
+        settingsClient = LocationServices.getSettingsClient(activity)
+        locationRequest = LocationRequest.Builder(10000).setPriority(Priority.PRIORITY_HIGH_ACCURACY).build()
+        getCurrentLocation{
+            onSuccess()
+        }
     }
-    // 3)Callbacks
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+    private val requestPermissionLauncher = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
         if (isGranted) {
             getCurrentLocation()
         } else {
-            stateController.errorStateRead( "Permission GPS denied")
+            val message = "Permission Denied"
+            messageLocation = message
+            Toast.makeText(activity,message,Toast.LENGTH_SHORT)
+            isLoading = false
+            isSuccess = false
         }
     }
-    private val gpsActivityResultLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+    private val gpsActivityResultLauncher = activity.registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             Log.e("result ", result.toString())
             isGpsEnabled = true
             getCurrentLocation()
         }else{
-            stateController.errorStateRead("يجب تفعيل ال GPS")
+            countReShow ++
+            if (countReShow <2){
+                getCurrentLocation()
+            }else{
+                val message = "يجب تفعيل ال GPS"
+                messageLocation = message
+                Toast.makeText(activity,message,Toast.LENGTH_SHORT)
+                isLoading = false
+                isSuccess = false
+            }
         }
     }
     private fun locationCallback(onSuccess: (LatLng) -> Unit): LocationCallback {
@@ -429,30 +431,4 @@ class LocationStoreActivity : ComponentActivity() {
         }
     }
 
-
-    fun updateLocation() {
-        val latiLng = location!!.latitude.toString() + "," + location!!.longitude.toString()
-        stateController.startAud()
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("latLng",latiLng)
-            .addFormDataPart("storeId", SelectedStore.store.value!!.id.toString())
-            .addFormDataPart("latitude", location!!.latitude.toString())
-            .addFormDataPart("longitude", location!!.longitude.toString())
-            .build()
-
-        requestServer.request2(body, "updateStoreLocation", { code, fail ->
-            stateController.errorStateAUD(fail)
-        }
-        ) { data ->
-//            val result: Store =
-//                MyJson.IgnoreUnknownKeys.decodeFromString(
-//                    data
-//                )
-            SelectedStore.store.value!! .latLng = latiLng
-
-            stateController.successStateAUD("تم بنجاح")
-            finish()
-        }
-    }
 }

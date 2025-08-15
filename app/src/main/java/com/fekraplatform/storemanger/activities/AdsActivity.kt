@@ -139,7 +139,7 @@ class AdsActivity : ComponentActivity() {
 //                                            goToAddToCart(product!!)
 //                                    }
                                     } .maskClip(MaterialTheme.shapes.extraLarge).background(Color.Red),
-                                        contentScale = ContentScale.Crop
+                                        contentScale = ContentScale.Fit
                                         )
                                     CustomIcon(Icons.Default.Delete, tint = Color.Red) {
                                         deleteAds(ads.id.toString())
@@ -188,7 +188,7 @@ class AdsActivity : ComponentActivity() {
                 ) {
                     item {
                         var selectedDays by remember { mutableIntStateOf(1) }
-                        CustomImageViewUri(imageUrl = uriImage!!,Modifier.padding(8.dp).height(205.dp), contentScale =  ContentScale.Crop)
+                        CustomImageViewUri(imageUrl = uriImage!!,Modifier.padding(8.dp).height(205.dp), contentScale =  ContentScale.Fit)
                         Text("مدة الاعلان " + if (selectedDays == 1) "يوم واحد" else  selectedDays.toString() +"أيام",Modifier.padding(8.dp))
                         LazyRow(Modifier.height(80.dp).padding(8.dp)) {
                             items(7){it->
@@ -205,7 +205,26 @@ class AdsActivity : ComponentActivity() {
                         Button(
                             modifier = Modifier.padding(8.dp).fillMaxWidth(),
                             onClick = {
-                                addAds(selectedDays)
+                                val uriVal = uriImage ?: return@Button
+
+                                try {
+                                    val inputStream = contentResolver.openInputStream(uriVal)
+                                    val sizeInBytes = inputStream?.available() ?: 0
+                                    val sizeInKB = sizeInBytes / 1024
+
+                                    if (sizeInKB > 300) {
+                                        stateController.errorStateAUD("حجم الصورة يجب أن يكون أقل من 300 كيلوبايت")
+                                        return@Button
+                                    }
+
+                                    inputStream!!.close()
+
+                                    addAds(selectedDays)
+                                } catch (e: Exception) {
+                                    stateController.errorStateAUD("فشل في تحميل الصورة: ${e.message}")
+                                }
+
+
                         }) {
                             Text("اضافة")
                         }

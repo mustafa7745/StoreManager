@@ -356,9 +356,7 @@ class StoreCategoriesActivity : ComponentActivity() {
                             }
 
 //                            if ()
-                            item {
-                                SingletonStoreConfig.EditModeCompose()
-                            }
+
 //                            item {
 //                             Button(onClick = {
 //                                 isShowAddCatgory.value = true

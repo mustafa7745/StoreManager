@@ -42,6 +42,8 @@ import com.fekraplatform.storemanger.shared.RequestServer
 import com.fekraplatform.storemanger.shared.StateController
 import com.fekraplatform.storemanger.shared.builderForm2
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 
 class SettingsActivity : ComponentActivity() {
     val requestServer = RequestServer(this)
@@ -128,9 +130,14 @@ class SettingsActivity : ComponentActivity() {
 
     }
 
+    private fun gotoProfile() {
+        val intent = Intent(this, ProfileActivity::class.java)
+        startActivity(intent)
+    }
+
     @Composable
     private fun SettingsList() {
-        CustomCard2(modifierBox = Modifier.clickable { page = pages[1]}) {
+        CustomCard2(modifierBox = Modifier.clickable { gotoProfile()}) {
             CustomRow {
                 Text("الملف الشخصي")
                 CustomImageViewUri(modifier = Modifier.size(30.dp), imageUrl = R.drawable.uinfo)
@@ -202,6 +209,7 @@ class SettingsActivity : ComponentActivity() {
     }
     private fun logout() {
         stateController.startAud()
+
         val body = builderForm2().build()
 
         requestServer.request2(body, "logout", { code, fail ->
@@ -212,7 +220,7 @@ class SettingsActivity : ComponentActivity() {
            gotoLogin()
         }
     }
-    private fun gotoLogin() {
+     fun gotoLogin() {
         val intent =
             Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP

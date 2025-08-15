@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +65,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import coil.compose.rememberImagePainter
 import com.fekraplatform.storemanger.R
 import com.fekraplatform.storemanger.shared.AToken
@@ -77,7 +81,11 @@ import com.fekraplatform.storemanger.shared.builderForm0
 import com.fekraplatform.storemanger.shared.builderForm1
 import com.fekraplatform.storemanger.storage.MyAppStorage
 import com.fekraplatform.storemanger.ui.theme.StoreMangerTheme
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Locale
 
@@ -220,8 +228,33 @@ class LoginActivity : ComponentActivity() {
                                     ) {
                                         Text(text = stringResource(R.string.Go))
                                     }
+
+
                                     // Error Message
                                 }
+                                Image(
+                                    painter = painterResource(id = R.drawable.android_light_sq), // تأكد من وضع الشعار في مجلد res/drawable
+                                    contentDescription = "Google Logo",
+                                    modifier = Modifier
+
+                                        .padding(top = 30.dp).clickable {
+                                            stateController.startAud()
+                                            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                                if (!task.isSuccessful) {
+                                                    stateController.errorStateAUD("لا توجد شيكة")
+//                                                    Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+//                                                    return@addOnCompleteListener
+                                                }else{
+                                                    // Get new token
+                                                    val token = task.result
+                                                    signInWithGoogle(token,this@LoginActivity)
+                                                    Log.d("FCM Token", "Token: $token")
+                                                }
+                                            }
+                                        }
+                                )
+
+
 
                                 // Sign Up Link
                                 Spacer(modifier = Modifier.height(20.dp))
@@ -422,7 +455,7 @@ class LoginActivity : ComponentActivity() {
                             Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)) {
-                            Text(item.name + " " + item.code + "+")
+                            Text(item.name.toString() + " " + item.code + "+")
                         }
                     }
 
@@ -496,13 +529,76 @@ class LoginActivity : ComponentActivity() {
             return false
         }
     }
+
+    fun signInWithGoogle(token:String,context: Context) {
+
+//        stateController.startAud()
+        val credentialManager = CredentialManager.create(context)
+
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId("635175556369-ltr2c9r3caj7805kgi4vo8l34uukok58.apps.googleusercontent.com") // استبدل بـ Web Client ID الخاص بك
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val result = credentialManager.getCredential(context, request)
+                val credential = result.credential.data
+
+                    val idToken = credential.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID_TOKEN")
+                    val email = credential.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_ID")
+                    val displayName = credential.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_DISPLAY_NAME")
+                    val givenName = credential.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_GIVEN_NAME")
+                    val familyName = credential.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_FAMILY_NAME")
+                    val profilePictureUri = credential.getString("com.google.android.libraries.identity.googleid.BUNDLE_KEY_PROFILE_PICTURE_URI")
+
+                    Log.d("SignIn", "ID Token: $idToken")
+                    Log.d("SignIn", "Email: $email")
+                    Log.d("SignIn", "Display Name: $displayName")
+                    Log.d("SignIn", "Given Name: $givenName")
+                    Log.d("SignIn", "Family Name: $familyName")
+                    Log.d("SignIn", "Profile Picture URI: $profilePictureUri")
+                    Log.d("SignIn", "Credential: ${credential}")
+                    // يمكنك الآن إرسال الـ idToken لخادمك للتحقق من هوية المستخدم
+                    // أو التعامل مع بيانات المستخدم كما تشاء
+
+
+
+                val body = builderForm1(token)
+                    .addFormDataPart("loginType", "Google")
+                    .addFormDataPart("googleToken", idToken.toString())
+//                    .addFormDataPart("email", email.toString())
+//                    .addFormDataPart("fname",givenName.toString())
+//                    .addFormDataPart("lname",familyName.toString())
+                    .build()
+
+                requestServer.request2(body,"login",{code,fail->
+                    stateController.errorStateAUD(fail)
+                }
+                ){it->
+                    AToken().setAccessToken(it)
+                    gotoDashboard()
+                }
+
+                // التعامل مع بيانات المستخدم هنا
+
+            } catch (e: GetCredentialException) {
+                e.message?.let { stateController.errorStateAUD(it) }
+                Log.e("SignIn", "Sign-in failed", e)
+            }
+        }
+    }
 }
 @Serializable
 data class LoginConfiguration (val countries:List<Country>,val languages: List<Language>)
 @Serializable
 data class Language(val name:String,val code: String)
 @Serializable
-data class Country(val name: String, val code: String)
+data class Country(val name:  Map<String, String>, val code: String)
 fun getAppLanguage(context: Context): String {
     val configuration = context.resources.configuration
 
